@@ -3,817 +3,545 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WiFi Risk Scorer</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<title>WifiGuard — Network Risk Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
-    --bg: #0a0e1a;
-    --surface: #111827;
-    --surface2: #1a2235;
-    --border: rgba(255,255,255,0.08);
-    --accent: #00f5a0;
-    --accent2: #00d4ff;
-    --danger: #ff4d6d;
-    --warning: #ffd166;
-    --safe: #06d6a0;
-    --text: #f0f4ff;
-    --muted: #8892a4;
+    --ink: #1a1a1a;
+    --ink2: #4b5563;
+    --ink3: #9ca3af;
+    --ink4: #d1d5db;
+    --surface: #fff;
+    --page: #f7f6f3;
+    --edge: #e8e6e0;
+    --edge2: #f0ede8;
+    --blue: #2563eb;
+    --blue-bg: #eff6ff;
+    --green: #16a34a;
+    --green-bg: #f0fdf4;
+    --amber: #d97706;
+    --red: #dc2626;
+    --red-bg: #fef2f2;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
   }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; font-family: var(--sans); background: var(--page); color: var(--ink); }
 
-  body {
-    font-family: 'Syne', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Animated grid background */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(0,245,160,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,245,160,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  .container {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 2rem 1.5rem;
-    position: relative;
-    z-index: 1;
-  }
-
-  /* Header */
-  header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 3rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-icon {
-    width: 42px;
-    height: 42px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-  }
-
-  .logo h1 {
-    font-size: 1.3rem;
-    font-weight: 800;
-    letter-spacing: -0.5px;
-  }
-
-  .logo span {
-    color: var(--accent);
-  }
-
-  .badge {
-    font-family: 'Space Mono', monospace;
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--accent);
-    color: var(--accent);
-    letter-spacing: 1px;
-  }
-
-  /* Main layout */
-  .main-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  @media (max-width: 768px) {
-    .main-grid { grid-template-columns: 1fr; }
-  }
-
-  /* Panel */
-  .panel {
+  /* ── Topbar ── */
+  .topbar {
+    height: 52px;
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 1.5rem;
-  }
-
-  .panel-title {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .panel-title::before {
-    content: '';
-    width: 3px;
-    height: 14px;
-    background: var(--accent);
-    border-radius: 2px;
-    display: block;
-  }
-
-  /* Form options */
-  .option-group {
-    margin-bottom: 1.25rem;
-  }
-
-  .option-label {
-    font-size: 13px;
-    color: var(--muted);
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .option-label .icon { font-size: 14px; }
-
-  .radio-group {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
-
-  .radio-btn {
-    flex: 1;
-    min-width: 80px;
-    cursor: pointer;
-  }
-
-  .radio-btn input { display: none; }
-
-  .radio-btn span {
-    display: block;
-    text-align: center;
-    padding: 8px 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-    transition: all 0.2s;
-    background: var(--surface2);
-    white-space: nowrap;
-  }
-
-  .radio-btn input:checked + span {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(0,245,160,0.08);
-  }
-
-  .radio-btn:hover span {
-    border-color: rgba(255,255,255,0.2);
-    color: var(--text);
-  }
-
-  /* Toggle switch */
-  .toggle-row {
+    border-bottom: 1px solid var(--edge);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
 
-  .toggle-row:last-child { border-bottom: none; }
+  .wordmark { font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -0.3px; }
+  .wordmark em { font-style: normal; color: var(--blue); }
 
-  .toggle-label {
-    font-size: 13px;
-    color: var(--muted);
+  .nav { display: flex; gap: 2px; }
+  .nav-item { font-size: 12px; padding: 5px 12px; border-radius: 20px; color: var(--ink3); cursor: pointer; transition: all .15s; font-weight: 500; }
+  .nav-item:hover { background: var(--edge2); color: var(--ink2); }
+  .nav-item.active { background: var(--edge2); color: var(--ink); }
+
+  .topbar-right { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink3); }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+
+  /* ── Layout ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    height: calc(100vh - 52px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--edge);
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .sb-section {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--edge2);
+  }
+
+  .sb-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink3);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    font-size: 12px;
+    color: var(--ink2);
+    margin-bottom: 6px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
   }
 
-  .toggle {
-    position: relative;
-    width: 40px;
-    height: 22px;
+  .ssid-input {
+    width: 100%;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: var(--mono);
+    color: var(--ink);
+    background: var(--page);
+    outline: none;
+    transition: border .15s, background .15s;
+  }
+  .ssid-input:focus { border-color: var(--blue); background: var(--surface); }
+  .ssid-input::placeholder { color: var(--ink4); }
+
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+
+  .chip {
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--edge);
+    color: var(--ink3);
     cursor: pointer;
+    transition: all .15s;
+    background: var(--page);
+    font-weight: 500;
+    user-select: none;
   }
+  .chip:hover { border-color: var(--ink4); color: var(--ink2); }
+  .chip.on { border-color: var(--blue); color: var(--blue); background: var(--blue-bg); }
 
-  .toggle input { display: none; }
-
-  .toggle-track {
-    position: absolute;
-    inset: 0;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 11px;
-    transition: all 0.3s;
+  /* Toggles */
+  .trow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--edge2);
   }
+  .trow:last-child { border-bottom: none; }
 
-  .toggle-thumb {
+  .trow-label { font-size: 12px; color: var(--ink2); display: flex; align-items: center; gap: 7px; }
+
+  .sw {
+    width: 34px;
+    height: 18px;
+    border-radius: 9px;
+    background: var(--edge);
+    position: relative;
+    cursor: pointer;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+  .sw.on { background: var(--blue); }
+  .sw-knob {
     position: absolute;
-    top: 3px;
-    left: 3px;
+    top: 2px;
+    left: 2px;
     width: 14px;
     height: 14px;
-    background: var(--muted);
     border-radius: 50%;
-    transition: all 0.3s;
+    background: #fff;
+    transition: left .2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,.15);
   }
+  .sw.on .sw-knob { left: 18px; }
 
-  .toggle input:checked ~ .toggle-track {
-    background: rgba(0,245,160,0.15);
-    border-color: var(--accent);
-  }
-
-  .toggle input:checked ~ .toggle-thumb {
-    left: 21px;
-    background: var(--accent);
-  }
-
-  /* Analyze button */
-  .analyze-btn {
+  /* Run button */
+  .run-btn {
     width: 100%;
-    padding: 14px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    padding: 11px;
+    background: var(--ink);
     border: none;
-    border-radius: 10px;
-    color: #0a0e1a;
-    font-family: 'Syne', sans-serif;
-    font-size: 15px;
-    font-weight: 800;
+    border-radius: 7px;
+    color: #fff;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
-    letter-spacing: 0.5px;
-    margin-top: 1.5rem;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
+    transition: background .15s, transform .1s;
+    letter-spacing: .01em;
   }
+  .run-btn:hover { background: #111; }
+  .run-btn:active { transform: scale(0.98); }
+  .run-btn.loading { background: #555; cursor: not-allowed; }
 
-  .analyze-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 30px rgba(0,245,160,0.3);
-  }
-
-  .analyze-btn:active { transform: translateY(0); }
-
-  /* Result panel */
-  .result-panel {
-    position: sticky;
-    top: 1rem;
-  }
-
-  /* Score display */
-  .score-ring-wrap {
+  /* ── Main area ── */
+  .main {
+    padding: 24px;
+    overflow-y: auto;
     display: flex;
-    justify-content: center;
-    margin: 1rem 0 1.5rem;
-    position: relative;
+    flex-direction: column;
+    gap: 14px;
   }
 
-  .score-ring {
-    position: relative;
-    width: 160px;
-    height: 160px;
-  }
-
-  .score-ring svg {
-    transform: rotate(-90deg);
-    width: 160px;
-    height: 160px;
-  }
-
-  .score-ring-bg { fill: none; stroke: var(--surface2); stroke-width: 10; }
-
-  .score-ring-fill {
-    fill: none;
-    stroke-width: 10;
-    stroke-linecap: round;
-    stroke-dasharray: 408;
-    stroke-dashoffset: 408;
-    transition: stroke-dashoffset 1.2s cubic-bezier(0.4,0,0.2,1), stroke 0.5s;
-  }
-
-  .score-center {
-    position: absolute;
-    inset: 0;
+  /* Idle state */
+  .idle {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    flex: 1;
+    gap: 14px;
+    color: var(--ink4);
+    padding: 80px 40px;
+    text-align: center;
   }
+  .idle p { font-size: 13px; color: var(--ink3); line-height: 1.6; max-width: 260px; }
 
-  .score-number {
-    font-size: 42px;
-    font-weight: 800;
-    line-height: 1;
-    font-family: 'Space Mono', monospace;
-  }
-
-  .score-label {
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 1px;
-    margin-top: 2px;
-  }
-
-  /* Risk level badge */
-  .risk-badge {
+  .idle-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--edge2);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    margin-bottom: 1.5rem;
-    border: 1px solid;
-    transition: all 0.5s;
   }
 
-  .risk-badge.safe { color: var(--safe); border-color: var(--safe); background: rgba(6,214,160,0.08); }
-  .risk-badge.moderate { color: var(--warning); border-color: var(--warning); background: rgba(255,209,102,0.08); }
-  .risk-badge.dangerous { color: var(--danger); border-color: var(--danger); background: rgba(255,77,109,0.08); }
+  /* Result cards */
+  .top-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .metric {
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .metric-label { font-size: 10px; font-weight: 600; color: var(--ink3); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px; }
+  .metric-value { font-size: 30px; font-weight: 500; color: var(--ink); font-family: var(--mono); line-height: 1; letter-spacing: -1px; }
+  .metric-sub { font-size: 11px; color: var(--ink3); margin-top: 5px; }
+  .metric.danger .metric-value { color: var(--red); }
+  .metric.warn .metric-value { color: var(--amber); }
+  .metric.safe .metric-value { color: var(--green); }
+  .metric.danger { border-left: 3px solid var(--red); }
+  .metric.warn { border-left: 3px solid var(--amber); }
+  .metric.safe { border-left: 3px solid var(--green); }
+
+  .mid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--edge);
+    border-radius: 10px;
+    padding: 18px;
+  }
+  .card-title { font-size: 10px; font-weight: 600; color: var(--ink3); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 14px; }
 
   /* Breakdown bars */
-  .breakdown-item {
-    margin-bottom: 12px;
-  }
+  .bar-row { margin-bottom: 11px; }
+  .bar-row:last-child { margin-bottom: 0; }
+  .bar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+  .bar-name { font-size: 12px; color: var(--ink2); }
+  .bar-pts { font-size: 11px; font-family: var(--mono); font-weight: 500; }
+  .bar-track { height: 3px; background: var(--edge2); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 3px; border-radius: 2px; width: 0; transition: width 1s cubic-bezier(.4,0,.2,1); }
 
-  .breakdown-header {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-    margin-bottom: 5px;
-  }
-
-  .breakdown-name { color: var(--muted); }
-  .breakdown-pts { font-family: 'Space Mono', monospace; font-weight: 700; }
-
-  .breakdown-bar-bg {
-    height: 5px;
-    background: var(--surface2);
-    border-radius: 3px;
-    overflow: hidden;
-  }
-
-  .breakdown-bar-fill {
-    height: 100%;
-    border-radius: 3px;
-    transition: width 1s cubic-bezier(0.4,0,0.2,1);
-    width: 0%;
-  }
-
-  /* Recommendations */
-  .rec-list { list-style: none; margin-top: 1rem; }
-
+  /* Recs */
   .rec-item {
     display: flex;
-    gap: 10px;
     align-items: flex-start;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-    color: var(--muted);
-    line-height: 1.5;
-  }
-
-  .rec-item:last-child { border-bottom: none; }
-
-  .rec-icon {
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 11px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
-
-  .rec-icon.bad { background: rgba(255,77,109,0.15); color: var(--danger); }
-  .rec-icon.good { background: rgba(6,214,160,0.15); color: var(--safe); }
-
-  /* Stats row */
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
-    margin-bottom: 1.5rem;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--edge2);
+    font-size: 12px;
+    color: var(--ink2);
+    line-height: 1.55;
+  }
+  .rec-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .rec-bullet {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+  .rec-bullet.bad { background: var(--red); }
+  .rec-bullet.good { background: var(--green); }
+
+  /* Network badge */
+  .net-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--ink2);
+    background: var(--page);
+    border: 1px solid var(--edge);
+    border-radius: 5px;
+    padding: 4px 10px;
+    margin-bottom: 14px;
   }
 
-  .stat-card {
-    background: var(--surface2);
-    border-radius: 10px;
-    padding: 12px;
-    text-align: center;
-  }
-
-  .stat-value {
-    font-family: 'Space Mono', monospace;
-    font-size: 20px;
-    font-weight: 700;
-  }
-
-  .stat-name {
-    font-size: 10px;
-    color: var(--muted);
-    margin-top: 2px;
-    letter-spacing: 0.5px;
-  }
-
-  /* Idle state */
-  .idle-state {
-    text-align: center;
-    padding: 2rem 1rem;
-    color: var(--muted);
-  }
-
-  .idle-state .big-icon {
-    font-size: 48px;
-    margin-bottom: 1rem;
-    opacity: 0.3;
-  }
-
-  .idle-state p { font-size: 13px; line-height: 1.6; }
-
-  /* Pulse animation */
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-  }
-
-  .scanning { animation: pulse 1.5s infinite; }
-
-  /* Network name input */
-  .net-input {
-    width: 100%;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 9px 12px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .net-input:focus { border-color: var(--accent); }
-  .net-input::placeholder { color: var(--muted); }
-
-  /* Divider */
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 1.5rem 0;
-  }
-
-  .full-width { grid-column: 1 / -1; }
-
-  /* History */
+  /* History card */
   .history-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
+    border-bottom: 1px solid var(--edge2);
+    font-size: 12px;
   }
-
   .history-row:last-child { border-bottom: none; }
-  .history-name { color: var(--text); font-family: 'Space Mono', monospace; font-size: 11px; }
-  .history-score { font-weight: 700; font-family: 'Space Mono', monospace; font-size: 12px; }
+  .history-name { color: var(--ink2); font-family: var(--mono); font-size: 11px; }
+  .history-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-family: var(--mono);
+  }
+  .history-badge.safe { background: var(--green-bg); color: var(--green); }
+  .history-badge.warn { background: #fffbeb; color: var(--amber); }
+  .history-badge.danger { background: var(--red-bg); color: var(--red); }
+
+  @media (max-width: 700px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { height: auto; border-right: none; border-bottom: 1px solid var(--edge); }
+    .top-row { grid-template-columns: 1fr 1fr; }
+    .mid-row { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <div class="logo">
-      <div class="logo-icon">📡</div>
-      <h1>WiFi<span>Risk</span></h1>
-    </div>
-    <div class="badge">v2.0 SCANNER</div>
-  </header>
 
-  <div class="main-grid">
-
-    <!-- LEFT: Input Panel -->
-    <div>
-      <div class="panel">
-        <div class="panel-title">Network Details</div>
-
-        <div class="option-group">
-          <div class="option-label"><span class="icon">🔤</span> Network Name (SSID)</div>
-          <input class="net-input" type="text" id="ssid" placeholder="e.g. Airport_Free_WiFi" maxlength="32">
-        </div>
-
-        <div class="option-group">
-          <div class="option-label"><span class="icon">🔒</span> Encryption Type</div>
-          <div class="radio-group">
-            <label class="radio-btn"><input type="radio" name="encryption" value="open" checked><span>Open</span></label>
-            <label class="radio-btn"><input type="radio" name="encryption" value="wep"><span>WEP</span></label>
-            <label class="radio-btn"><input type="radio" name="encryption" value="wpa"><span>WPA</span></label>
-            <label class="radio-btn"><input type="radio" name="encryption" value="wpa3"><span>WPA3</span></label>
-          </div>
-        </div>
-
-        <div class="option-group">
-          <div class="option-label"><span class="icon">🔑</span> Password Strength</div>
-          <div class="radio-group">
-            <label class="radio-btn"><input type="radio" name="password" value="none" checked><span>None</span></label>
-            <label class="radio-btn"><input type="radio" name="password" value="weak"><span>Weak</span></label>
-            <label class="radio-btn"><input type="radio" name="password" value="strong"><span>Strong</span></label>
-          </div>
-        </div>
-
-        <div class="option-group">
-          <div class="option-label"><span class="icon">📶</span> Signal Strength</div>
-          <div class="radio-group">
-            <label class="radio-btn"><input type="radio" name="signal" value="weak" checked><span>Weak</span></label>
-            <label class="radio-btn"><input type="radio" name="signal" value="moderate"><span>Fair</span></label>
-            <label class="radio-btn"><input type="radio" name="signal" value="strong"><span>Strong</span></label>
-            <label class="radio-btn"><input type="radio" name="signal" value="very_strong"><span>Max</span></label>
-          </div>
-        </div>
-
-        <div class="option-group">
-          <div class="option-label"><span class="icon">📍</span> Location Type</div>
-          <div class="radio-group">
-            <label class="radio-btn"><input type="radio" name="location" value="airport" checked><span>Airport</span></label>
-            <label class="radio-btn"><input type="radio" name="location" value="cafe"><span>Cafe</span></label>
-            <label class="radio-btn"><input type="radio" name="location" value="hotel"><span>Hotel</span></label>
-            <label class="radio-btn"><input type="radio" name="location" value="home"><span>Home</span></label>
-          </div>
-        </div>
-
-        <div class="divider"></div>
-        <div class="panel-title">Security Flags</div>
-
-        <div class="toggle-row">
-          <span class="toggle-label">🌐 Site uses HTTPS</span>
-          <label class="toggle">
-            <input type="checkbox" id="https">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label">✅ Trusted / Known network</span>
-          <label class="toggle">
-            <input type="checkbox" id="known">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label">🛡️ VPN active</span>
-          <label class="toggle">
-            <input type="checkbox" id="vpn">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label">🔥 Firewall enabled</span>
-          <label class="toggle">
-            <input type="checkbox" id="firewall">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <span class="toggle-label">👥 Many users connected</span>
-          <label class="toggle">
-            <input type="checkbox" id="crowded">
-            <div class="toggle-track"></div>
-            <div class="toggle-thumb"></div>
-          </label>
-        </div>
-
-        <button class="analyze-btn" onclick="analyzeRisk()">⚡ ANALYZE NETWORK RISK</button>
-      </div>
-    </div>
-
-    <!-- RIGHT: Results Panel -->
-    <div class="result-panel">
-      <div class="panel" id="result-panel">
-        <div class="panel-title">Risk Analysis</div>
-
-        <div class="idle-state" id="idle-state">
-          <div class="big-icon">📡</div>
-          <p>Configure your network details on the left and click <strong>Analyze</strong> to get a full security assessment.</p>
-        </div>
-
-        <div id="result-content" style="display:none">
-          <!-- Score Ring -->
-          <div class="score-ring-wrap">
-            <div class="score-ring">
-              <svg viewBox="0 0 160 160">
-                <circle class="score-ring-bg" cx="80" cy="80" r="65"/>
-                <circle class="score-ring-fill" id="ring-fill" cx="80" cy="80" r="65"/>
-              </svg>
-              <div class="score-center">
-                <div class="score-number" id="score-num">0</div>
-                <div class="score-label">/ 100</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Risk Badge -->
-          <div class="risk-badge" id="risk-badge">—</div>
-
-          <!-- Stats -->
-          <div class="stats-row">
-            <div class="stat-card">
-              <div class="stat-value" id="stat-threats">—</div>
-              <div class="stat-name">THREATS</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-protections">—</div>
-              <div class="stat-name">GUARDS</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="stat-grade">—</div>
-              <div class="stat-name">GRADE</div>
-            </div>
-          </div>
-
-          <!-- Breakdown -->
-          <div class="panel-title">Score Breakdown</div>
-          <div id="breakdown-list"></div>
-
-          <div class="divider"></div>
-
-          <!-- Recommendations -->
-          <div class="panel-title">Recommendations</div>
-          <ul class="rec-list" id="rec-list"></ul>
-        </div>
-      </div>
-
-      <!-- Scan History -->
-      <div class="panel" style="margin-top: 1rem;" id="history-panel" style="display:none">
-        <div class="panel-title">Scan History</div>
-        <div id="history-list"></div>
-      </div>
-    </div>
-
+<div class="topbar">
+  <div class="wordmark">Wifi<em>Guard</em></div>
+  <nav class="nav">
+    <div class="nav-item active">Scanner</div>
+    <div class="nav-item">History</div>
+  </nav>
+  <div class="topbar-right">
+    <div class="status-dot"></div>
+    Ready
   </div>
 </div>
 
+<div class="layout">
+  <aside class="sidebar">
+
+    <div class="sb-section">
+      <div class="sb-label">Network</div>
+      <div class="field">
+        <div class="field-label">SSID name</div>
+        <input class="ssid-input" type="text" id="ssid" placeholder="e.g. Airport_Free_WiFi" maxlength="32">
+      </div>
+      <div class="field">
+        <div class="field-label">Encryption</div>
+        <div class="chips" id="enc-group">
+          <div class="chip on" data-val="open" onclick="pick('enc-group',this,'enc')">Open</div>
+          <div class="chip" data-val="wep" onclick="pick('enc-group',this,'enc')">WEP</div>
+          <div class="chip" data-val="wpa" onclick="pick('enc-group',this,'enc')">WPA</div>
+          <div class="chip" data-val="wpa3" onclick="pick('enc-group',this,'enc')">WPA3</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Password strength</div>
+        <div class="chips" id="pwd-group">
+          <div class="chip on" data-val="none" onclick="pick('pwd-group',this,'pwd')">None</div>
+          <div class="chip" data-val="weak" onclick="pick('pwd-group',this,'pwd')">Weak</div>
+          <div class="chip" data-val="strong" onclick="pick('pwd-group',this,'pwd')">Strong</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Signal strength</div>
+        <div class="chips" id="sig-group">
+          <div class="chip" data-val="weak" onclick="pick('sig-group',this,'sig')">Weak</div>
+          <div class="chip on" data-val="moderate" onclick="pick('sig-group',this,'sig')">Fair</div>
+          <div class="chip" data-val="strong" onclick="pick('sig-group',this,'sig')">Strong</div>
+          <div class="chip" data-val="very_strong" onclick="pick('sig-group',this,'sig')">Max</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="field-label">Location type</div>
+        <div class="chips" id="loc-group">
+          <div class="chip on" data-val="airport" onclick="pick('loc-group',this,'loc')">Airport</div>
+          <div class="chip" data-val="cafe" onclick="pick('loc-group',this,'loc')">Cafe</div>
+          <div class="chip" data-val="hotel" onclick="pick('loc-group',this,'loc')">Hotel</div>
+          <div class="chip" data-val="home" onclick="pick('loc-group',this,'loc')">Home</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <div class="sb-label">Security flags</div>
+      <div class="trow">
+        <div class="trow-label">HTTPS active</div>
+        <div class="sw" id="sw-https" onclick="swToggle('sw-https','https')"><div class="sw-knob"></div></div>
+      </div>
+      <div class="trow">
+        <div class="trow-label">Trusted / known network</div>
+        <div class="sw" id="sw-known" onclick="swToggle('sw-known','known')"><div class="sw-knob"></div></div>
+      </div>
+      <div class="trow">
+        <div class="trow-label">VPN enabled</div>
+        <div class="sw" id="sw-vpn" onclick="swToggle('sw-vpn','vpn')"><div class="sw-knob"></div></div>
+      </div>
+      <div class="trow">
+        <div class="trow-label">Firewall on</div>
+        <div class="sw" id="sw-firewall" onclick="swToggle('sw-firewall','firewall')"><div class="sw-knob"></div></div>
+      </div>
+      <div class="trow">
+        <div class="trow-label">Crowded network</div>
+        <div class="sw" id="sw-crowded" onclick="swToggle('sw-crowded','crowded')"><div class="sw-knob"></div></div>
+      </div>
+    </div>
+
+    <div class="sb-section">
+      <button class="run-btn" id="run-btn" onclick="runScan()">Run security scan</button>
+    </div>
+
+  </aside>
+
+  <main class="main" id="main">
+
+    <div class="idle" id="idle">
+      <div class="idle-icon">
+        <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+          <path d="M11 17a1.5 1.5 0 100 3 1.5 1.5 0 000-3zM4 7a9.5 9.5 0 0114 0M7 10a6 6 0 018 0M9.5 13a3 3 0 013 0" stroke="#9ca3af" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <p>Configure your network details in the panel and run a scan to get a full security analysis.</p>
+    </div>
+
+    <div id="results" style="display:none;flex-direction:column;gap:14px">
+
+      <div class="top-row">
+        <div class="metric" id="mc-score">
+          <div class="metric-label">Risk score</div>
+          <div class="metric-value" id="mv-score">—</div>
+          <div class="metric-sub">out of 100</div>
+        </div>
+        <div class="metric" id="mc-grade">
+          <div class="metric-label">Security grade</div>
+          <div class="metric-value" id="mv-grade">—</div>
+          <div class="metric-sub">letter rating</div>
+        </div>
+        <div class="metric" id="mc-level">
+          <div class="metric-label">Risk level</div>
+          <div class="metric-value" id="mv-level" style="font-size:18px;margin-top:6px">—</div>
+          <div class="metric-sub" id="mv-summary">—</div>
+        </div>
+      </div>
+
+      <div class="mid-row">
+        <div class="card">
+          <div class="card-title">Score breakdown</div>
+          <div id="breakdown-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Recommendations</div>
+          <div id="rec-list"></div>
+        </div>
+      </div>
+
+      <div class="card" id="history-card" style="display:none">
+        <div class="card-title">Recent scans</div>
+        <div id="history-list"></div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
 <script>
-  const history = [];
+const S = { enc:'open', pwd:'none', sig:'moderate', loc:'airport', https:false, known:false, vpn:false, firewall:false, crowded:false };
+const history = [];
 
-  function getFormData() {
-    return {
-      ssid: document.getElementById('ssid').value || 'Unknown Network',
-      encryption: document.querySelector('input[name="encryption"]:checked').value,
-      password: document.querySelector('input[name="password"]:checked').value,
-      signal: document.querySelector('input[name="signal"]:checked').value,
-      location: document.querySelector('input[name="location"]:checked').value,
-      https: document.getElementById('https').checked,
-      known: document.getElementById('known').checked,
-      vpn: document.getElementById('vpn').checked,
-      firewall: document.getElementById('firewall').checked,
-      crowded: document.getElementById('crowded').checked
-    };
-  }
+function pick(groupId, el, key) {
+  document.querySelectorAll('#' + groupId + ' .chip').forEach(c => c.classList.remove('on'));
+  el.classList.add('on');
+  S[key] = el.dataset.val;
+}
 
-  function analyzeRisk() {
-    const data = getFormData();
-    const btn = document.querySelector('.analyze-btn');
-    btn.textContent = '⏳ SCANNING...';
-    btn.disabled = true;
+function swToggle(swId, key) {
+  const el = document.getElementById(swId);
+  el.classList.toggle('on');
+  S[key] = el.classList.contains('on');
+}
 
-    fetch('/score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
+function runScan() {
+  const btn = document.getElementById('run-btn');
+  btn.textContent = 'Scanning...';
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const data = {
+    ssid: document.getElementById('ssid').value.trim() || 'Unknown Network',
+    encryption: S.enc, password: S.pwd, signal: S.sig, location: S.loc,
+    https: S.https, known: S.known, vpn: S.vpn, firewall: S.firewall, crowded: S.crowded
+  };
+
+  fetch('/score', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(data) })
     .then(r => r.json())
-    .then(res => {
-      displayResult(res, data);
-      btn.textContent = '⚡ ANALYZE NETWORK RISK';
-      btn.disabled = false;
-    })
-    .catch(() => {
-      btn.textContent = '⚡ ANALYZE NETWORK RISK';
-      btn.disabled = false;
-    });
-  }
+    .then(res => { showResults(res, data.ssid); })
+    .catch(() => { alert('Error connecting to server.'); })
+    .finally(() => { btn.textContent = 'Run security scan'; btn.classList.remove('loading'); btn.disabled = false; });
+}
 
-  function displayResult(res, data) {
-    document.getElementById('idle-state').style.display = 'none';
-    document.getElementById('result-content').style.display = 'block';
+function showResults(r, ssid) {
+  document.getElementById('idle').style.display = 'none';
+  const res = document.getElementById('results');
+  res.style.display = 'flex';
 
-    // Animate score
-    const scoreEl = document.getElementById('score-num');
-    const ring = document.getElementById('ring-fill');
-    const circumference = 408;
-    const offset = circumference - (res.risk / 100) * circumference;
+  const cls = r.level === 'Safe' ? 'safe' : r.level === 'Moderate' ? 'warn' : 'danger';
 
-    let color = '#06d6a0';
-    if (res.risk > 60) color = '#ff4d6d';
-    else if (res.risk > 30) color = '#ffd166';
+  ['mc-score','mc-grade','mc-level'].forEach(id => {
+    document.getElementById(id).className = 'metric ' + cls;
+  });
 
-    ring.style.stroke = color;
-    ring.style.strokeDashoffset = offset;
-    scoreEl.style.color = color;
+  const scoreEl = document.getElementById('mv-score');
+  let count = 0;
+  const timer = setInterval(() => {
+    count = Math.min(count + 2, r.risk);
+    scoreEl.textContent = count;
+    if (count >= r.risk) clearInterval(timer);
+  }, 16);
 
-    let count = 0;
-    const target = res.risk;
-    const timer = setInterval(() => {
-      count += 2;
-      if (count >= target) { count = target; clearInterval(timer); }
-      scoreEl.textContent = count;
-    }, 20);
+  document.getElementById('mv-grade').textContent = r.grade;
+  document.getElementById('mv-level').textContent = r.level;
+  document.getElementById('mv-summary').textContent = r.threats + ' threat' + (r.threats !== 1 ? 's' : '') + ', ' + r.protections + ' guard' + (r.protections !== 1 ? 's' : '');
 
-    // Badge
-    const badge = document.getElementById('risk-badge');
-    badge.className = 'risk-badge ' + res.level.toLowerCase();
-    const icons = { Safe: '✅', Moderate: '⚠️', Dangerous: '🚨' };
-    badge.innerHTML = `${icons[res.level] || ''} ${res.level.toUpperCase()}`;
+  const bl = document.getElementById('breakdown-list');
+  bl.innerHTML = '';
+  r.breakdown.forEach(item => {
+    const pct = Math.round((item.points / item.max) * 100);
+    const c = item.points === 0 ? '#16a34a' : item.points <= 10 ? '#d97706' : '#dc2626';
+    bl.innerHTML += `<div class="bar-row"><div class="bar-header"><span class="bar-name">${item.label}</span><span class="bar-pts" style="color:${c}">+${item.points}</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div></div>`;
+  });
 
-    // Stats
-    document.getElementById('stat-threats').textContent = res.threats;
-    document.getElementById('stat-protections').textContent = res.protections;
-    document.getElementById('stat-grade').textContent = res.grade;
-    document.getElementById('stat-threats').style.color = color;
+  const rl = document.getElementById('rec-list');
+  rl.innerHTML = '';
+  r.recommendations.forEach(rec => {
+    rl.innerHTML += `<div class="rec-item"><div class="rec-bullet ${rec.type}"></div><span>${rec.text}</span></div>`;
+  });
 
-    // Breakdown
-    const bList = document.getElementById('breakdown-list');
-    bList.innerHTML = '';
-    res.breakdown.forEach(item => {
-      const pct = (item.points / item.max) * 100;
-      const bColor = item.points > 0 ? '#ff4d6d' : '#06d6a0';
-      bList.innerHTML += `
-        <div class="breakdown-item">
-          <div class="breakdown-header">
-            <span class="breakdown-name">${item.label}</span>
-            <span class="breakdown-pts" style="color:${bColor}">+${item.points}</span>
-          </div>
-          <div class="breakdown-bar-bg">
-            <div class="breakdown-bar-fill" style="width:${pct}%;background:${bColor}"></div>
-          </div>
-        </div>`;
-    });
-
-    // Recommendations
-    const rList = document.getElementById('rec-list');
-    rList.innerHTML = '';
-    res.recommendations.forEach(r => {
-      rList.innerHTML += `
-        <li class="rec-item">
-          <div class="rec-icon ${r.type}">${r.type === 'bad' ? '✕' : '✓'}</div>
-          <span>${r.text}</span>
-        </li>`;
-    });
-
-    // History
-    history.unshift({ ssid: data.ssid, score: res.risk, level: res.level, color });
-    if (history.length > 5) history.pop();
-    updateHistory();
-  }
-
-  function updateHistory() {
-    const panel = document.getElementById('history-panel');
-    const list = document.getElementById('history-list');
-    panel.style.display = 'block';
-    list.innerHTML = history.map(h => `
-      <div class="history-row">
-        <span class="history-name">${h.ssid}</span>
-        <span class="history-score" style="color:${h.color}">${h.score} — ${h.level}</span>
-      </div>`).join('');
-  }
+  history.unshift({ ssid, score: r.risk, level: r.level, cls });
+  if (history.length > 5) history.pop();
+  const hc = document.getElementById('history-card');
+  const hl = document.getElementById('history-list');
+  hc.style.display = 'block';
+  hl.innerHTML = history.map(h => `<div class="history-row"><span class="history-name">${h.ssid}</span><span class="history-badge ${h.cls}">${h.score} — ${h.level}</span></div>`).join('');
+}
 </script>
 </body>
 </html>
