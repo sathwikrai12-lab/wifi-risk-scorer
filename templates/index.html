@@ -3,117 +3,582 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WifiGuard</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<title>WifiGuard — Connection Security Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--ink:#1a1a1a;--ink2:#4b5563;--ink3:#9ca3af;--ink4:#d1d5db;--surface:#fff;--page:#f7f6f3;--edge:#e8e6e0;--edge2:#f0ede8;--blue:#2563eb;--blue-bg:#eff6ff;--green:#16a34a;--green-bg:#f0fdf4;--amber:#d97706;--amber-bg:#fffbeb;--red:#dc2626;--red-bg:#fef2f2;--mono:'IBM Plex Mono',monospace;--sans:'DM Sans',sans-serif}
-html,body{height:100%;font-family:var(--sans);background:var(--page);color:var(--ink)}
-.topbar{height:52px;background:var(--surface);border-bottom:1px solid var(--edge);display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:10}
-.wordmark{font-size:15px;font-weight:600;letter-spacing:-0.3px}
-.wordmark em{font-style:normal;color:var(--blue)}
-.topbar-right{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3)}
-.live-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.hero{max-width:760px;margin:0 auto;padding:48px 24px 40px}
-.hero-label{font-size:11px;font-weight:600;color:var(--blue);letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:6px}
-.hero-label::before{content:'';width:20px;height:1px;background:var(--blue);display:block}
-.hero h1{font-size:32px;font-weight:600;color:var(--ink);letter-spacing:-1px;line-height:1.2;margin-bottom:12px}
-.hero h1 span{color:var(--ink3);font-weight:400}
-.hero p{font-size:14px;color:var(--ink2);line-height:1.7;max-width:520px;margin-bottom:32px}
-.scan-btn{display:inline-flex;align-items:center;gap:10px;padding:13px 24px;background:var(--ink);border:none;border-radius:8px;color:#fff;font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s;letter-spacing:.01em}
-.scan-btn:hover{background:#111}
+:root{
+  --ink:#0d0d0d;--ink2:#374151;--ink3:#6b7280;--ink4:#d1d5db;
+  --bg:#f8f7f4;--surface:#ffffff;--edge:#e5e3de;--edge2:#f0ede8;
+  --blue:#2563eb;--blue-dim:#eff6ff;
+  --green:#16a34a;--green-dim:#f0fdf4;--green-mid:#22c55e;
+  --amber:#d97706;--amber-dim:#fffbeb;
+  --red:#dc2626;--red-dim:#fef2f2;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;
+  --radius:12px;--radius-sm:8px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+}
+html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6}
+
+/* ── NAV ── */
+.nav{height:56px;background:var(--surface);border-bottom:1px solid var(--edge);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:100}
+.logo{font-weight:700;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+.logo-shield{width:28px;height:28px;background:var(--ink);border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo-shield svg{width:14px;height:14px;fill:none;stroke:#fff;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.nav-right{display:flex;align-items:center;gap:16px}
+.status-badge{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink3);background:var(--edge2);padding:5px 12px;border-radius:20px;border:1px solid var(--edge)}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--green-mid);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(0.85)}}
+.nav-btn{font-size:13px;color:var(--ink3);background:none;border:1px solid var(--edge);border-radius:var(--radius-sm);padding:6px 14px;cursor:pointer;font-family:var(--sans);font-weight:500;transition:all .15s}
+.nav-btn:hover{background:var(--edge2);color:var(--ink)}
+.nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ── LAYOUT ── */
+.page{max-width:900px;margin:0 auto;padding:48px 24px 80px}
+.tabs{display:flex;gap:0;background:var(--edge2);border-radius:var(--radius-sm);padding:3px;margin-bottom:40px;border:1px solid var(--edge)}
+.tab{flex:1;text-align:center;padding:8px 16px;font-size:13px;font-weight:500;color:var(--ink3);border-radius:6px;cursor:pointer;transition:all .2s;border:none;background:none;font-family:var(--sans)}
+.tab.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab-panel{display:none}.tab-panel.active{display:block}
+
+/* ── HERO ── */
+.hero-section{text-align:center;padding:16px 0 48px}
+.hero-eyebrow{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:16px}
+.hero-title{font-size:42px;font-weight:700;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px;color:var(--ink)}
+.hero-title em{font-style:normal;color:var(--ink3);font-weight:300}
+.hero-sub{font-size:15px;color:var(--ink3);max-width:440px;margin:0 auto 40px;line-height:1.7}
+
+/* ── SCAN BUTTON ── */
+.scan-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+.scan-btn{display:inline-flex;align-items:center;gap:10px;padding:15px 32px;background:var(--ink);border:none;border-radius:var(--radius-sm);color:#fff;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;letter-spacing:-.2px;transition:all .15s;position:relative;overflow:hidden}
+.scan-btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+.scan-btn:hover::after{background:rgba(255,255,255,.05)}
 .scan-btn:active{transform:scale(.98)}
-.scan-btn.loading{background:#555;cursor:not-allowed}
-.scan-note{font-size:12px;color:var(--ink3);margin-top:10px}
-.divider{height:1px;background:var(--edge);margin:40px 0}
-.info-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px}
-.info-pill{display:flex;align-items:center;gap:6px;font-size:12px;font-family:var(--mono);color:var(--ink2);background:var(--surface);border:1px solid var(--edge);border-radius:5px;padding:5px 11px}
-.info-pill .pl{color:var(--ink3);font-size:10px;margin-right:2px}
-.good-pill{border-color:var(--green);color:var(--green);background:var(--green-bg)}
-.warn-pill{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
-.bad-pill{border-color:var(--red);color:var(--red);background:var(--red-bg)}
-.results{display:none;flex-direction:column;gap:14px}
-.results.show{display:flex}
-.top-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.metric{background:var(--surface);border:1px solid var(--edge);border-radius:10px;padding:18px 20px;border-left:3px solid var(--edge)}
-.metric.safe{border-left-color:var(--green)}.metric.warn{border-left-color:var(--amber)}.metric.danger{border-left-color:var(--red)}
-.metric-label{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px}
-.metric-value{font-size:30px;font-weight:500;color:var(--ink);font-family:var(--mono);line-height:1;letter-spacing:-1px}
-.metric-sub{font-size:11px;color:var(--ink3);margin-top:5px}
-.metric.safe .metric-value{color:var(--green)}.metric.warn .metric-value{color:var(--amber)}.metric.danger .metric-value{color:var(--red)}
-.mid-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.card{background:var(--surface);border:1px solid var(--edge);border-radius:10px;padding:18px 20px}
-.card-title{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:14px}
-.bar-row{margin-bottom:12px}.bar-row:last-child{margin-bottom:0}
-.bar-header{display:flex;justify-content:space-between;margin-bottom:5px}
-.bar-name{font-size:12px;color:var(--ink2)}
-.bar-pts{font-size:11px;font-family:var(--mono);font-weight:500}
-.bar-track{height:3px;background:var(--edge2);border-radius:2px;overflow:hidden}
-.bar-fill{height:3px;border-radius:2px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
-.rec-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--edge2);font-size:12px;color:var(--ink2);line-height:1.55}
+.scan-btn.loading{background:#374151;cursor:not-allowed}
+.scan-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s}
+.scan-btn.loading svg{animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.scan-note{font-size:12px;color:var(--ink4)}
+
+/* ── RESULTS ── */
+.results{display:none;flex-direction:column;gap:20px}.results.show{display:flex}
+.result-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.result-timestamp{font-size:12px;color:var(--ink3);font-family:var(--mono)}
+.result-actions{display:flex;gap:8px}
+.action-btn{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--ink2);background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius-sm);padding:6px 14px;cursor:pointer;font-family:var(--sans);transition:all .15s}
+.action-btn:hover{background:var(--edge2)}
+.action-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── GAUGE ROW ── */
+.gauge-row{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start}
+.gauge-card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:28px;display:flex;flex-direction:column;align-items:center;box-shadow:var(--shadow)}
+.gauge-wrap{position:relative;width:180px;height:180px;margin-bottom:16px}
+.gauge-svg{width:180px;height:180px;transform:rotate(-90deg)}
+.gauge-bg{fill:none;stroke:var(--edge2);stroke-width:14}
+.gauge-fill{fill:none;stroke-width:14;stroke-linecap:round;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1),stroke .4s}
+.gauge-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.gauge-score{font-size:42px;font-weight:700;letter-spacing:-2px;font-family:var(--mono);line-height:1}
+.gauge-label{font-size:11px;color:var(--ink3);font-weight:500;letter-spacing:.05em;text-transform:uppercase;margin-top:2px}
+.gauge-meta{text-align:center}
+.gauge-level{font-size:18px;font-weight:700;letter-spacing:-0.5px;margin-bottom:4px}
+.gauge-grade-wrap{display:inline-flex;align-items:center;gap:6px;background:var(--edge2);border-radius:6px;padding:4px 14px}
+.gauge-grade{font-size:22px;font-weight:700;font-family:var(--mono)}
+.gauge-grade-sub{font-size:11px;color:var(--ink3);font-weight:500}
+
+/* ── PILL BAR ── */
+.pill-grid{display:flex;flex-direction:column;gap:12px}
+.info-card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.info-pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{display:flex;align-items:center;gap:8px;font-size:12px;font-family:var(--mono);padding:6px 12px;border-radius:20px;border:1px solid var(--edge);background:var(--surface)}
+.pill-label{font-size:10px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.pill.green{border-color:var(--green);color:var(--green);background:var(--green-dim)}
+.pill.red{border-color:var(--red);color:var(--red);background:var(--red-dim)}
+.pill.amber{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.pill-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.pill-dot.green{background:var(--green)}.pill-dot.red{background:var(--red)}.pill-dot.amber{background:var(--amber)}
+
+/* ── SCORE CARDS ── */
+.threat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.t-card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.t-card-count{font-size:28px;font-weight:700;letter-spacing:-1px;font-family:var(--mono);line-height:1}
+.t-card-label{font-size:11px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.t-card.red .t-card-count{color:var(--red)}
+.t-card.green .t-card-count{color:var(--green)}
+
+/* ── BREAKDOWN & RECS ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.section-card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.section-title{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--edge2)}
+.bar-item{margin-bottom:14px}
+.bar-item:last-child{margin-bottom:0}
+.bar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.bar-name{font-size:13px;color:var(--ink2)}
+.bar-pts{font-size:12px;font-family:var(--mono);font-weight:500}
+.bar-track{height:4px;background:var(--edge2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.rec-item{display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--edge2);font-size:13px;color:var(--ink2);line-height:1.55;align-items:flex-start}
 .rec-item:last-child{border-bottom:none;padding-bottom:0}
-.rec-bullet{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
-.rec-bullet.bad{background:var(--red)}.rec-bullet.good{background:var(--green)}
+.rec-icon{width:18px;height:18px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center}
+.rec-icon.bad{background:var(--red-dim)}
+.rec-icon.good{background:var(--green-dim)}
+.rec-icon svg{width:9px;height:9px;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.rec-icon.bad svg{stroke:var(--red)}
+.rec-icon.good svg{stroke:var(--green)}
+
+/* ── FINGERPRINT ── */
+.fingerprint-card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.fp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.fp-item{background:var(--edge2);border-radius:var(--radius-sm);padding:12px}
+.fp-key{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink3);margin-bottom:4px}
+.fp-val{font-size:13px;font-family:var(--mono);color:var(--ink);word-break:break-all}
+
+/* ── HISTORY ── */
+.history-empty{text-align:center;padding:60px 24px;color:var(--ink3)}
+.history-empty-icon{font-size:32px;margin-bottom:12px}
+.history-list{display:flex;flex-direction:column;gap:12px}
+.history-item{background:var(--surface);border:1px solid var(--edge);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:16px;cursor:pointer;transition:all .15s}
+.history-item:hover{border-color:var(--ink4);background:var(--edge2)}
+.history-score{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.history-score.safe{background:var(--green-dim);color:var(--green)}
+.history-score.warn{background:var(--amber-dim);color:var(--amber)}
+.history-score.danger{background:var(--red-dim);color:var(--red)}
+.history-meta{flex:1;min-width:0}
+.history-ip{font-size:13px;font-family:var(--mono);color:var(--ink);font-weight:500}
+.history-detail{font-size:12px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.history-time{font-size:11px;color:var(--ink4);font-family:var(--mono);flex-shrink:0}
+.history-grade{font-size:18px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.history-grade.safe{color:var(--green)}.history-grade.warn{color:var(--amber)}.history-grade.danger{color:var(--red)}
+.history-actions{display:flex;gap:6px;margin-bottom:16px;justify-content:flex-end}
+.clear-btn{font-size:12px;color:var(--red);background:none;border:1px solid var(--red);border-radius:var(--radius-sm);padding:5px 12px;cursor:pointer;font-family:var(--sans);font-weight:500;transition:all .15s}
+.clear-btn:hover{background:var(--red-dim)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;font-size:13px;padding:12px 20px;border-radius:var(--radius-sm);z-index:9999;transform:translateY(100px);opacity:0;transition:all .3s;max-width:300px}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ── RESCAN ROW ── */
 .rescan-row{display:flex;align-items:center;justify-content:space-between}
-.rescan-btn{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--sans);font-weight:500;text-decoration:underline;text-underline-offset:3px}
-.scan-time{font-size:11px;color:var(--ink3);font-family:var(--mono)}
-@media(max-width:640px){.top-row{grid-template-columns:1fr 1fr}.mid-row{grid-template-columns:1fr}.hero h1{font-size:24px}}
+.rescan-btn{font-size:13px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--sans);font-weight:500;display:flex;align-items:center;gap:5px}
+.rescan-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── SAVING INDICATOR ── */
+.save-indicator{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--green);opacity:0;transition:opacity .3s}
+.save-indicator.show{opacity:1}
+.save-indicator svg{width:13px;height:13px;stroke:var(--green);fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+@media(max-width:700px){
+  .gauge-row{grid-template-columns:1fr}
+  .two-col{grid-template-columns:1fr}
+  .hero-title{font-size:30px}
+  .nav{padding:0 16px}
+  .page{padding:32px 16px 60px}
+}
 </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="wordmark">Wifi<em>Guard</em></div>
-  <div class="topbar-right"><div class="live-dot"></div>Auto-detection mode</div>
-</div>
-<div class="hero">
-  <div class="hero-label">Network security scanner</div>
-  <h1>How safe is your <span>connection right now?</span></h1>
-  <p>WifiGuard automatically detects your IP address, ISP, location, VPN status, and HTTPS usage</p>
-  <button class="scan-btn" id="scan-btn" onclick="runScan()">&#9881; Scan my connection</button>
-  <div class="scan-note">Your IP is read server-side — nothing is stored.</div>
-  <div class="divider"></div>
-  <div class="info-bar" id="info-bar" style="display:none"></div>
-  <div class="results" id="results">
-    <div class="rescan-row">
-      <div class="scan-time" id="scan-time"></div>
-      <button class="rescan-btn" onclick="runScan()">Run again</button>
+
+<nav class="nav">
+  <div class="logo">
+    <div class="logo-shield">
+      <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
     </div>
-    <div class="top-row">
-      <div class="metric" id="mc-score"><div class="metric-label">Risk score</div><div class="metric-value" id="mv-score">0</div><div class="metric-sub">out of 100</div></div>
-      <div class="metric" id="mc-grade"><div class="metric-label">Security grade</div><div class="metric-value" id="mv-grade">—</div><div class="metric-sub">letter rating</div></div>
-      <div class="metric" id="mc-level"><div class="metric-label">Risk level</div><div class="metric-value" id="mv-level" style="font-size:18px;margin-top:6px">—</div><div class="metric-sub" id="mv-summary">—</div></div>
+    WifiGuard
+  </div>
+  <div class="nav-right">
+    <div class="status-badge"><div class="pulse"></div>Live detection</div>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('scanner')">Scanner</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab" onclick="switchTab('about')">How it works</button>
+  </div>
+
+  <!-- SCANNER TAB -->
+  <div id="tab-scanner" class="tab-panel active">
+    <div class="hero-section">
+      <div class="hero-eyebrow">Network Security Scanner</div>
+      <h1 class="hero-title">How safe is your <em>connection right now?</em></h1>
+      <p class="hero-sub">Instantly analyzes your IP, ISP, VPN status, HTTPS encryption, and regional risk — no data stored on our end.</p>
+      <div class="scan-wrap">
+        <button class="scan-btn" id="scan-btn" onclick="runScan()">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Scan my connection
+        </button>
+        <div class="scan-note">Your IP is read server-side — nothing is stored by us.</div>
+      </div>
     </div>
-    <div class="mid-row">
-      <div class="card"><div class="card-title">Score breakdown</div><div id="breakdown-list"></div></div>
-      <div class="card"><div class="card-title">Recommendations</div><div id="rec-list"></div></div>
+
+    <div class="results" id="results">
+      <div class="rescan-row">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="result-timestamp" id="scan-time"></span>
+          <div class="save-indicator" id="save-indicator">
+            <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            Saved to history
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="action-btn" onclick="shareResult()">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+          <button class="action-btn" onclick="exportResult()">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button class="action-btn" onclick="runScan()">
+            <svg viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Rescan
+          </button>
+        </div>
+      </div>
+
+      <!-- GAUGE + PILLS ROW -->
+      <div class="gauge-row">
+        <div class="gauge-card">
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 180 180">
+              <circle class="gauge-bg" cx="90" cy="90" r="74" stroke-dasharray="465" stroke-dashoffset="0"/>
+              <circle class="gauge-fill" id="gauge-arc" cx="90" cy="90" r="74" stroke-dasharray="465" stroke-dashoffset="465"/>
+            </svg>
+            <div class="gauge-center">
+              <div class="gauge-score" id="gauge-score">0</div>
+              <div class="gauge-label">risk score</div>
+            </div>
+          </div>
+          <div class="gauge-meta">
+            <div class="gauge-level" id="gauge-level">—</div>
+            <div class="gauge-grade-wrap">
+              <span class="gauge-grade" id="gauge-grade">—</span>
+              <span class="gauge-grade-sub">security grade</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pill-grid">
+          <div class="info-card">
+            <div class="section-title" style="margin-bottom:12px">Connection fingerprint</div>
+            <div class="info-pills" id="info-pills"></div>
+          </div>
+          <div class="threat-grid">
+            <div class="t-card red">
+              <div class="t-card-count" id="threat-count">—</div>
+              <div class="t-card-label">Threats detected</div>
+            </div>
+            <div class="t-card green">
+              <div class="t-card-count" id="guard-count">—</div>
+              <div class="t-card-label">Guards active</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BREAKDOWN + RECS -->
+      <div class="two-col">
+        <div class="section-card">
+          <div class="section-title">Risk breakdown</div>
+          <div id="breakdown-list"></div>
+        </div>
+        <div class="section-card">
+          <div class="section-title">Security recommendations</div>
+          <div id="rec-list"></div>
+        </div>
+      </div>
+
+      <!-- FINGERPRINT TABLE -->
+      <div class="fingerprint-card">
+        <div class="section-title">Network fingerprint</div>
+        <div class="fp-grid" id="fp-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div id="tab-history" class="tab-panel">
+    <div id="history-content">
+      <div class="history-empty">
+        <div class="history-empty-icon">📡</div>
+        <div style="font-weight:600;margin-bottom:4px">No scans yet</div>
+        <div style="font-size:13px">Run a scan to start building your history</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT TAB -->
+  <div id="tab-about" class="tab-panel">
+    <div class="section-card" style="max-width:600px">
+      <div class="section-title">How WifiGuard works</div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px">1. IP & Location Detection</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.65">Your IP is read server-side using a chain of free APIs (ip-api.com → ipwho.is → ipapi.co). We detect city, country, timezone, and ISP.</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px">2. VPN / Proxy Detection</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.65">We check API proxy/hosting flags plus org name keywords (VPN providers, data center names) to estimate if your real IP is masked.</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px">3. Risk Scoring (0–100)</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.65">Score combines: HTTPS (25pts) + No VPN (20pts) + ISP type (20pts) + Country risk (15pts) + Datacenter routing (20pts). Higher = more risk.</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px">4. History & Privacy</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.65">Scan history is stored locally in your browser only. Nothing is ever sent to or stored on our servers. Each page load starts fresh on the backend.</div>
+        </div>
+        <div>
+          <div style="font-weight:600;margin-bottom:4px;font-size:14px">5. Grades</div>
+          <div style="font-size:13px;color:var(--ink2);line-height:1.65">A+ = 0–15 pts (very safe) · B = 16–30 · C = 31–50 · D = 51–70 · F = 71–100 (high risk)</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-function runScan(){
-  var btn=document.getElementById('scan-btn');
-  btn.textContent='Scanning...';btn.classList.add('loading');btn.disabled=true;
-  fetch('/auto-scan').then(function(r){return r.json()}).then(function(res){showResults(res)}).catch(function(){alert('Scan failed. Please try again.')}).finally(function(){btn.textContent='Scan my connection';btn.classList.remove('loading');btn.disabled=false});
+var currentResult = null;
+var history = JSON.parse(localStorage.getItem('wg_history') || '[]');
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t,i){
+    var names = ['scanner','history','about'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('tab-'+name).classList.add('active');
+  if(name === 'history') renderHistory();
 }
-function showResults(r){
-  var d=r.detected;
-  var cls=r.level==='Safe'?'safe':r.level==='Moderate'?'warn':'danger';
-  var bar=document.getElementById('info-bar');
-  bar.style.display='flex';
-  bar.innerHTML='<div class="info-pill"><span class="pl">IP</span>'+d.ip+'</div><div class="info-pill"><span class="pl">ISP</span>'+(d.isp||'Unknown')+'</div><div class="info-pill"><span class="pl">Location</span>'+d.city+', '+d.country+'</div><div class="info-pill"><span class="pl">Timezone</span>'+d.timezone+'</div><div class="info-pill '+(d.is_https?'good-pill':'bad-pill')+'"><span class="pl">HTTPS</span>'+(d.is_https?'Yes':'No')+'</div><div class="info-pill '+(d.vpn?'good-pill':'warn-pill')+'"><span class="pl">VPN</span>'+(d.vpn?'Detected':'None')+'</div>';
-  ['mc-score','mc-grade','mc-level'].forEach(function(id){document.getElementById(id).className='metric '+cls});
-  var scoreEl=document.getElementById('mv-score');var count=0;
-  var timer=setInterval(function(){count=Math.min(count+2,r.risk);scoreEl.textContent=count;if(count>=r.risk)clearInterval(timer)},16);
-  document.getElementById('mv-grade').textContent=r.grade;
-  document.getElementById('mv-level').textContent=r.level;
-  document.getElementById('mv-summary').textContent=r.threats+' threat'+(r.threats!==1?'s':'')+', '+r.protections+' guard'+(r.protections!==1?'s':'');
-  document.getElementById('scan-time').textContent='Scanned at '+new Date().toLocaleTimeString();
-  var bl=document.getElementById('breakdown-list');bl.innerHTML='';
-  r.breakdown.forEach(function(item){var pct=Math.round((item.points/item.max)*100);var c=item.points===0?'#16a34a':item.points<=10?'#d97706':'#dc2626';bl.innerHTML+='<div class="bar-row"><div class="bar-header"><span class="bar-name">'+item.label+'</span><span class="bar-pts" style="color:'+c+'">+'+item.points+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+c+'"></div></div></div>'});
-  var rl=document.getElementById('rec-list');rl.innerHTML='';
-  r.recommendations.forEach(function(rec){rl.innerHTML+='<div class="rec-item"><div class="rec-bullet '+rec.type+'"></div><span>'+rec.text+'</span></div>'});
+
+function showToast(msg, dur) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show')}, dur || 2500);
+}
+
+function runScan() {
+  var btn = document.getElementById('scan-btn');
+  btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg> Scanning…';
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  fetch('/auto-scan')
+    .then(function(r){return r.json()})
+    .then(function(res){
+      currentResult = res;
+      showResults(res);
+      saveToHistory(res);
+    })
+    .catch(function(){showToast('Scan failed — check your connection')})
+    .finally(function(){
+      btn.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg> Scan my connection';
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    });
+}
+
+function saveToHistory(res) {
+  var entry = {
+    ts: new Date().toISOString(),
+    ip: res.detected.ip,
+    city: res.detected.city,
+    country: res.detected.country,
+    isp: res.detected.isp,
+    vpn: res.detected.vpn,
+    https: res.detected.is_https,
+    risk: res.risk,
+    grade: res.grade,
+    level: res.level,
+    threats: res.threats,
+    guards: res.protections
+  };
+  history.unshift(entry);
+  if(history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('wg_history', JSON.stringify(history));
+
+  var ind = document.getElementById('save-indicator');
+  ind.classList.add('show');
+  setTimeout(function(){ind.classList.remove('show')}, 2500);
+}
+
+function getColor(level) {
+  return level === 'Safe' ? 'var(--green)' : level === 'Moderate' ? 'var(--amber)' : 'var(--red)';
+}
+
+function showResults(r) {
+  var d = r.detected;
+  var color = getColor(r.level);
+  var cssClass = r.level === 'Safe' ? 'safe' : r.level === 'Moderate' ? 'warn' : 'danger';
+
+  // timestamp
+  document.getElementById('scan-time').textContent = 'Scanned ' + new Date().toLocaleTimeString();
+
+  // gauge animation
+  var arc = document.getElementById('gauge-arc');
+  var circumference = 465;
+  var offset = circumference - (r.risk / 100) * circumference;
+  arc.style.stroke = color;
+  setTimeout(function(){arc.style.strokeDashoffset = offset}, 50);
+
+  // score count-up
+  var scoreEl = document.getElementById('gauge-score');
+  scoreEl.style.color = color;
+  var count = 0;
+  var interval = setInterval(function(){
+    count = Math.min(count + 2, r.risk);
+    scoreEl.textContent = count;
+    if(count >= r.risk) clearInterval(interval);
+  }, 18);
+
+  document.getElementById('gauge-level').textContent = r.level;
+  document.getElementById('gauge-level').style.color = color;
+  document.getElementById('gauge-grade').textContent = r.grade;
+  document.getElementById('gauge-grade').style.color = color;
+
+  // threat counts
+  document.getElementById('threat-count').textContent = r.threats;
+  document.getElementById('guard-count').textContent = r.protections;
+
+  // info pills
+  var pills = document.getElementById('info-pills');
+  var vpnClass = d.vpn ? 'green' : 'amber';
+  var httpsClass = d.is_https ? 'green' : 'red';
+  pills.innerHTML = [
+    pill('IP', d.ip, ''),
+    pill('ISP', truncate(d.isp, 22), ''),
+    pill('Location', d.city + ', ' + d.country, ''),
+    pill('Timezone', d.timezone, ''),
+    pill('HTTPS', d.is_https ? 'Encrypted' : 'Unencrypted', httpsClass),
+    pill('VPN', d.vpn ? 'Detected' : 'None', vpnClass),
+  ].join('');
+
+  // fingerprint grid
+  var fp = document.getElementById('fp-grid');
+  fp.innerHTML = fpItem('IP Address', d.ip) + fpItem('ISP', d.isp) + fpItem('City', d.city) +
+    fpItem('Region', d.region || '—') + fpItem('Country', d.country) + fpItem('Timezone', d.timezone) +
+    fpItem('VPN / Proxy', d.vpn ? 'Yes (masked)' : 'Not detected') + fpItem('HTTPS', d.is_https ? 'Active' : 'Inactive');
+
+  // breakdown bars
+  var bl = document.getElementById('breakdown-list');
+  bl.innerHTML = '';
+  r.breakdown.forEach(function(item) {
+    var pct = Math.round((item.points / item.max) * 100);
+    var c = item.points === 0 ? 'var(--green)' : item.points <= 10 ? 'var(--amber)' : 'var(--red)';
+    bl.innerHTML += '<div class="bar-item"><div class="bar-head"><span class="bar-name">' + item.label + '</span><span class="bar-pts" style="color:' + c + '">+' + item.points + ' / ' + item.max + '</span></div><div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + c + '"></div></div></div>';
+  });
+
+  // recommendations
+  var rl = document.getElementById('rec-list');
+  rl.innerHTML = '';
+  r.recommendations.forEach(function(rec) {
+    var icon = rec.type === 'good'
+      ? '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>'
+      : '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    rl.innerHTML += '<div class="rec-item"><div class="rec-icon ' + rec.type + '">' + icon + '</div><span>' + rec.text + '</span></div>';
+  });
+
   document.getElementById('results').classList.add('show');
+}
+
+function pill(label, val, cls) {
+  return '<div class="pill ' + cls + '"><span class="pill-label">' + label + '</span>' + val + '</div>';
+}
+
+function fpItem(k, v) {
+  return '<div class="fp-item"><div class="fp-key">' + k + '</div><div class="fp-val">' + v + '</div></div>';
+}
+
+function truncate(s, n) {
+  return s && s.length > n ? s.slice(0, n) + '…' : (s || '—');
+}
+
+function shareResult() {
+  if(!currentResult) return;
+  var d = currentResult.detected;
+  var text = 'WifiGuard scan: Risk ' + currentResult.risk + '/100 (' + currentResult.level + ', grade ' + currentResult.grade + ') from ' + d.city + ', ' + d.country + '. VPN: ' + (d.vpn ? 'Yes' : 'No') + '. HTTPS: ' + (d.is_https ? 'Yes' : 'No') + '.';
+  if(navigator.share) {
+    navigator.share({title:'WifiGuard Result', text:text, url:window.location.href}).catch(function(){});
+  } else if(navigator.clipboard) {
+    navigator.clipboard.writeText(text + '\n' + window.location.href);
+    showToast('Result copied to clipboard');
+  } else {
+    showToast('Share not supported on this browser');
+  }
+}
+
+function exportResult() {
+  if(!currentResult) return;
+  var r = currentResult;
+  var d = r.detected;
+  var ts = new Date().toISOString();
+  var rows = [
+    ['Field','Value'],
+    ['Scan time', ts],
+    ['IP', d.ip], ['ISP', d.isp], ['City', d.city], ['Country', d.country],
+    ['Region', d.region], ['Timezone', d.timezone],
+    ['HTTPS', d.is_https ? 'Yes' : 'No'],
+    ['VPN detected', d.vpn ? 'Yes' : 'No'],
+    ['Risk score', r.risk],
+    ['Grade', r.grade],
+    ['Risk level', r.level],
+    ['Threats', r.threats],
+    ['Guards', r.protections],
+  ];
+  r.breakdown.forEach(function(b){ rows.push(['Breakdown: '+b.label, b.points+'/'+b.max]); });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'wifiguard-' + ts.slice(0,10) + '.csv';
+  a.click();
+  showToast('Exported as CSV');
+}
+
+function renderHistory() {
+  var container = document.getElementById('history-content');
+  if(!history.length) {
+    container.innerHTML = '<div class="history-empty"><div class="history-empty-icon">📡</div><div style="font-weight:600;margin-bottom:4px">No scans yet</div><div style="font-size:13px">Run a scan to start building your history</div></div>';
+    return;
+  }
+  var html = '<div class="history-actions"><button class="clear-btn" onclick="clearHistory()">Clear all history</button></div><div class="history-list">';
+  history.forEach(function(h, i) {
+    var cls = h.level === 'Safe' ? 'safe' : h.level === 'Moderate' ? 'warn' : 'danger';
+    var d = new Date(h.ts);
+    var time = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    html += '<div class="history-item" onclick="showHistoryDetail('+i+')">' +
+      '<div class="history-score '+cls+'">' + h.risk + '</div>' +
+      '<div class="history-meta"><div class="history-ip">' + h.ip + '</div>' +
+      '<div class="history-detail">' + h.city + ', ' + h.country + ' · ' + truncate(h.isp, 30) + '</div></div>' +
+      '<div class="history-time">' + time + '</div>' +
+      '<div class="history-grade '+cls+'">' + h.grade + '</div>' +
+      '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showHistoryDetail(i) {
+  var h = history[i];
+  var lines = [
+    '📍 ' + h.city + ', ' + h.country,
+    '🌐 IP: ' + h.ip,
+    '📡 ISP: ' + h.isp,
+    '🔒 HTTPS: ' + (h.https ? 'Yes' : 'No'),
+    '🛡️ VPN: ' + (h.vpn ? 'Detected' : 'None'),
+    '⚠️ Threats: ' + h.threats + ' | Guards: ' + h.guards,
+  ].join('\n');
+  showToast('Risk ' + h.risk + ' (' + h.level + ')  —  ' + h.city + ', ' + h.country, 3500);
+}
+
+function clearHistory() {
+  if(!confirm('Clear all scan history?')) return;
+  history = [];
+  localStorage.removeItem('wg_history');
+  renderHistory();
+  showToast('History cleared');
 }
 </script>
 </body>
