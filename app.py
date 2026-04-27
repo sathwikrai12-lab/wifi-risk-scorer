@@ -176,6 +176,21 @@ def run_checks(info, is_https, vpn):
         {'id': 'proto',  'name': 'Protocol Security',   'icon': '⚡',
          'status': 'pass' if is_https else 'fail',
          'detail': 'TLS/SSL active' if is_https else 'Plain HTTP — no TLS'},
+        {'id': 'firewall', 'name': 'Firewall', 'icon': '🔥',
+ 'status': 'warn', 'detail': 'Enable firewall'},
+
+{'id': 'updates', 'name': 'Updates', 'icon': '⬆️',
+ 'status': 'warn', 'detail': 'Update system regularly'},
+
+{'id': 'malware', 'name': 'Malware', 'icon': '🛡️',
+ 'status': 'warn', 'detail': 'Use antivirus'},
+
+{'id': 'publicwifi', 'name': 'Public WiFi', 'icon': '📶',
+ 'status': 'fail' if not vpn else 'pass',
+ 'detail': 'Unsafe without VPN'},
+
+{'id': 'tracking', 'name': 'Tracking', 'icon': '👣',
+ 'status': 'warn', 'detail': 'Network may track activity'}
     ]
 
 # ── SCORING ──────────────────────────────────────────────────────────
