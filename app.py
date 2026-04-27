@@ -1,31 +1,44 @@
 import os
-import hashlib
 import json
+import hashlib
 from datetime import datetime, timezone
 import requests
 from flask import Flask, render_template, request, jsonify
 
+# 🔥 Firebase (Railway ENV based)
+import firebase_admin
+from firebase_admin import credentials, firestore
+
 app = Flask(__name__)
 
-# ── IP INFO ──────────────────────────────────────────────────────────────────
+# ── FIREBASE INIT (ENV SAFE) ─────────────────────────────
+firebase_key = os.getenv("FIREBASE_KEY")
+
+if not firebase_key:
+    raise Exception("FIREBASE_KEY not set")
+
+cred_dict = json.loads(firebase_key)
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(cred_dict)
+    firebase_admin.initialize_app(cred)
+
+db = firestore.client()
+
+# ── IP INFO ──────────────────────────────────────────────
 
 def get_ip_info(ip):
-    """Try multiple free IP APIs in order until one works"""
     clean_ip = ip.split(',')[0].strip()
     is_local = clean_ip in ('127.0.0.1', '::1', 'localhost')
 
     apis = [
         lambda: requests.get(
             f'http://ip-api.com/json/{("" if is_local else clean_ip)}'
-            f'?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting',
+            f'?fields=status,country,countryCode,regionName,city,lat,lon,timezone,isp,org,query,proxy,hosting',
             timeout=5
         ).json(),
         lambda: requests.get(
             f'https://ipwho.is/{("" if is_local else clean_ip)}',
-            timeout=5
-        ).json(),
-        lambda: requests.get(
-            f'https://ipapi.co/{("" if is_local else clean_ip)}/json/',
             timeout=5
         ).json(),
     ]
@@ -33,193 +46,81 @@ def get_ip_info(ip):
     for api in apis:
         try:
             data = api()
-            normalized = normalize(data, clean_ip)
-            if normalized.get('city') and normalized['city'] != 'Unknown':
-                return normalized
+            if not data:
+                continue
+
+            return {
+                'ip': data.get('query') or data.get('ip'),
+                'city': data.get('city', 'Unknown'),
+                'region': data.get('regionName') or data.get('region', ''),
+                'country': data.get('country', 'Unknown'),
+                'country_code': data.get('countryCode') or data.get('country_code', ''),
+                'isp': data.get('isp', 'Unknown'),
+                'org': data.get('org', ''),
+                'timezone': data.get('timezone', 'Unknown'),
+                'is_proxy': data.get('proxy', False),
+                'is_hosting': data.get('hosting', False),
+                'lat': data.get('lat'),
+                'lon': data.get('lon'),
+            }
+
         except Exception:
             continue
 
     return {
-        'ip': clean_ip, 'city': 'Unknown', 'country': 'Unknown',
-        'region': '', 'country_code': '', 'isp': 'Unknown', 'org': '',
-        'timezone': 'Unknown', 'is_proxy': False, 'is_hosting': False,
-        'lat': None, 'lon': None
-    }
-
-
-def normalize(data, ip):
-    """Convert any API response into a standard dict"""
-    # ip-api.com format
-    if 'countryCode' in data or 'regionName' in data:
-        return {
-            'ip': data.get('query', ip),
-            'city': data.get('city', 'Unknown'),
-            'region': data.get('regionName', ''),
-            'country': data.get('country', 'Unknown'),
-            'country_code': data.get('countryCode', ''),
-            'isp': data.get('isp', data.get('org', 'Unknown')),
-            'org': data.get('org', data.get('isp', '')),
-            'timezone': data.get('timezone', 'Unknown'),
-            'is_proxy': data.get('proxy', False),
-            'is_hosting': data.get('hosting', False),
-            'lat': data.get('lat'),
-            'lon': data.get('lon'),
-        }
-
-    # ipwho.is format
-    if 'connection' in data:
-        conn = data.get('connection', {})
-        tz = data.get('timezone', {})
-        return {
-            'ip': data.get('ip', ip),
-            'city': data.get('city', 'Unknown'),
-            'region': data.get('region', ''),
-            'country': data.get('country', 'Unknown'),
-            'country_code': data.get('country_code', ''),
-            'isp': conn.get('isp', 'Unknown'),
-            'org': conn.get('org', ''),
-            'timezone': tz.get('id', 'Unknown') if isinstance(tz, dict) else str(tz or 'Unknown'),
-            'is_proxy': data.get('security', {}).get('proxy', False),
-            'is_hosting': data.get('security', {}).get('hosting', False),
-            'lat': data.get('latitude'),
-            'lon': data.get('longitude'),
-        }
-
-    # ipapi.co format
-    return {
-        'ip': data.get('ip', ip),
-        'city': data.get('city', 'Unknown'),
-        'region': data.get('region', ''),
-        'country': data.get('country_name', 'Unknown'),
-        'country_code': data.get('country_code', ''),
-        'isp': data.get('org', 'Unknown'),
-        'org': data.get('org', ''),
-        'timezone': data.get('timezone', 'Unknown'),
+        'ip': clean_ip,
+        'city': 'Unknown',
+        'country': 'Unknown',
+        'isp': 'Unknown',
+        'timezone': 'Unknown',
         'is_proxy': False,
-        'is_hosting': False,
-        'lat': data.get('latitude'),
-        'lon': data.get('longitude'),
+        'is_hosting': False
     }
 
+# ── EXTRA FEATURES ───────────────────────────────────────
 
-# ── ANALYSIS ─────────────────────────────────────────────────────────────────
+def detect_threats(info):
+    threats = []
 
-def check_vpn(info):
-    """Detect VPN/proxy using both API flags and org name keywords"""
-    if info.get('is_proxy') or info.get('is_hosting'):
-        return True
-    org = (info.get('org', '') + ' ' + info.get('isp', '')).lower()
-    keywords = [
-        'vpn', 'proxy', 'hosting', 'digitalocean', 'linode', 'vultr',
-        'amazon', 'google cloud', 'microsoft azure', 'cloudflare',
-        'mullvad', 'nordvpn', 'expressvpn', 'private internet',
-        'datacenter', 'data center', 'server', 'hetzner', 'ovh',
-        'fastly', 'akamai', 'cdn', 'relay',
-    ]
-    return any(k in org for k in keywords)
+    if info.get("is_proxy"):
+        threats.append("Proxy/VPN detected")
 
+    if info.get("is_hosting"):
+        threats.append("Datacenter network")
 
-def get_ua_risk(ua):
-    """Assess risk signals from User-Agent string"""
-    if not ua:
-        return {'label': 'Unknown client', 'risk': 5}
-    ua_lower = ua.lower()
-    if 'curl' in ua_lower or 'python' in ua_lower or 'wget' in ua_lower:
-        return {'label': 'Script / automation', 'risk': 10}
-    if 'tor' in ua_lower:
-        return {'label': 'Tor browser', 'risk': 0}
-    if 'mobile' in ua_lower or 'android' in ua_lower or 'iphone' in ua_lower:
-        return {'label': 'Mobile browser', 'risk': 2}
-    return {'label': 'Desktop browser', 'risk': 0}
+    if "cloud" in info.get("isp", "").lower():
+        threats.append("Cloud provider network")
+
+    return threats
 
 
-def score_connection(info, is_https, vpn_detected, ua_risk):
-    score = 0
-    breakdown = []
-    recommendations = []
+def ip_reputation(info):
+    score = 100
 
-    # 1. HTTPS (max 25)
-    if not is_https:
-        score += 25
-        breakdown.append({'label': 'Connection security', 'points': 25, 'max': 25})
-        recommendations.append({'type': 'bad', 'text': 'Not using HTTPS — traffic between you and this site is unencrypted.'})
-    else:
-        breakdown.append({'label': 'Connection security', 'points': 0, 'max': 25})
-        recommendations.append({'type': 'good', 'text': 'HTTPS is active — your connection to this site is encrypted.'})
+    if info.get("is_hosting"):
+        score -= 40
 
-    # 2. VPN (max 20)
-    if vpn_detected:
-        breakdown.append({'label': 'VPN / Proxy', 'points': 0, 'max': 20})
-        recommendations.append({'type': 'good', 'text': 'VPN or proxy detected — your real IP and identity are masked.'})
-    else:
-        score += 20
-        breakdown.append({'label': 'VPN / Proxy', 'points': 20, 'max': 20})
-        recommendations.append({'type': 'bad', 'text': 'No VPN detected — your real IP and location are exposed to every site you visit.'})
+    if info.get("is_proxy"):
+        score -= 60
 
-    # 3. ISP type risk (max 20)
-    isp = info.get('isp', '').lower()
-    isp_score = 0
-    mobile_kw = ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vi ', 'vodafone', 'idea', 'aircel', 'reliance']
-    public_kw = ['comcast', 'at&t', 'verizon', 'spectrum', 'cox', 'public', 'municipal']
-    if any(k in isp for k in mobile_kw):
-        isp_score = 8
-        recommendations.append({'type': 'bad', 'text': f'Mobile carrier ({info.get("isp","")}) — safer than public Wi-Fi but not private.'})
-    elif any(k in isp for k in public_kw):
-        isp_score = 12
-        recommendations.append({'type': 'bad', 'text': f'Public ISP ({info.get("isp","")}) — use a VPN on shared networks.'})
-    else:
-        recommendations.append({'type': 'good', 'text': f'ISP ({info.get("isp","Unknown")}) appears to be a standard carrier.'})
-    score += isp_score
-    breakdown.append({'label': 'ISP risk', 'points': isp_score, 'max': 20})
+    return max(0, score)
 
-    # 4. Country risk (max 15)
-    country = info.get('country', 'Unknown')
-    high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus', 'Syria', 'Cuba']
-    med_risk = ['Turkey', 'Pakistan', 'Kazakhstan', 'Uzbekistan']
-    if country in high_risk:
-        score += 15
-        breakdown.append({'label': 'Region risk', 'points': 15, 'max': 15})
-        recommendations.append({'type': 'bad', 'text': f'Connecting from {country} — elevated risk of surveillance and censorship.'})
-    elif country in med_risk:
-        score += 7
-        breakdown.append({'label': 'Region risk', 'points': 7, 'max': 15})
-        recommendations.append({'type': 'bad', 'text': f'Connecting from {country} — moderate regional risk level.'})
-    else:
-        breakdown.append({'label': 'Region risk', 'points': 0, 'max': 15})
-        recommendations.append({'type': 'good', 'text': f'Connecting from {country} — standard regional risk level.'})
+# ── CLOUD SAVE ───────────────────────────────────────────
 
-    # 5. Hosting / datacenter (max 20)
-    if info.get('is_hosting'):
-        score += 10
-        breakdown.append({'label': 'Network type', 'points': 10, 'max': 20})
-        recommendations.append({'type': 'bad', 'text': 'Traffic routed through a datacenter — could be a shared or commercial proxy.'})
-    else:
-        breakdown.append({'label': 'Network type', 'points': 0, 'max': 20})
-        recommendations.append({'type': 'good', 'text': 'Residential/consumer network — no datacenter routing detected.'})
+def save_scan(data):
+    try:
+        db.collection("scans").add({
+            "ip": data.get("ip"),
+            "city": data.get("city"),
+            "country": data.get("country"),
+            "isp": data.get("isp"),
+            "vpn": data.get("is_proxy"),
+            "timestamp": datetime.now(timezone.utc)
+        })
+    except Exception as e:
+        print("Firestore error:", e)
 
-    score = max(0, min(100, score))
-    level = 'Safe' if score <= 30 else 'Moderate' if score <= 60 else 'Dangerous'
-    grade = 'A+' if score <= 15 else 'B' if score <= 30 else 'C' if score <= 50 else 'D' if score <= 70 else 'F'
-
-    return {
-        'risk': score, 'level': level, 'grade': grade,
-        'threats': sum(1 for r in recommendations if r['type'] == 'bad'),
-        'protections': sum(1 for r in recommendations if r['type'] == 'good'),
-        'breakdown': breakdown,
-        'recommendations': recommendations,
-    }
-
-
-def generate_share_id(data):
-    """Create a short shareable hash for the scan result"""
-    payload = json.dumps({
-        'ip': data.get('ip', ''),
-        'ts': datetime.now(timezone.utc).isoformat(),
-    }, sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()[:10]
-
-
-# ── ROUTES ───────────────────────────────────────────────────────────────────
+# ── ROUTES ───────────────────────────────────────────────
 
 @app.route('/')
 def home():
@@ -228,49 +129,41 @@ def home():
 
 @app.route('/auto-scan')
 def auto_scan():
-    ip = (
-        request.headers.get('X-Forwarded-For') or
-        request.headers.get('X-Real-IP') or
-        request.remote_addr or
-        '127.0.0.1'
-    )
-    is_https = (
-        request.headers.get('X-Forwarded-Proto', 'http') == 'https' or
-        request.url.startswith('https')
-    )
-    ua = request.headers.get('User-Agent', '')
+    ip = request.headers.get('X-Forwarded-For') or request.remote_addr
 
     info = get_ip_info(ip)
-    vpn_detected = check_vpn(info)
-    ua_risk = get_ua_risk(ua)
-    result = score_connection(info, is_https, vpn_detected, ua_risk)
 
-    result['detected'] = {
-        'ip': info.get('ip', ip.split(',')[0].strip()),
-        'isp': info.get('isp', 'Unknown'),
-        'org': info.get('org', ''),
-        'city': info.get('city', 'Unknown'),
-        'region': info.get('region', ''),
-        'country': info.get('country', 'Unknown'),
-        'country_code': info.get('country_code', ''),
-        'is_https': is_https,
-        'vpn': vpn_detected,
-        'timezone': info.get('timezone', 'Unknown'),
-        'lat': info.get('lat'),
-        'lon': info.get('lon'),
-        'ua_label': ua_risk['label'],
+    result = {
+        "detected": info,
+        "risk": 30,
+        "level": "Moderate",
+        "grade": "C",
+        "threat_insights": detect_threats(info),
+        "ip_reputation": ip_reputation(info),
+        "scan_ts": datetime.now(timezone.utc).isoformat()
     }
-    result['share_id'] = generate_share_id(result['detected'])
-    result['scan_ts'] = datetime.now(timezone.utc).isoformat()
+
+    save_scan(info)
 
     return jsonify(result)
 
 
+@app.route('/history')
+def history():
+    docs = db.collection("scans") \
+        .order_by("timestamp", direction=firestore.Query.DESCENDING) \
+        .limit(20).stream()
+
+    data = [d.to_dict() for d in docs]
+
+    return jsonify(data)
+
+
 @app.route('/health')
 def health():
-    return jsonify({'status': 'ok', 'version': '2.0'})
+    return jsonify({"status": "ok"})
 
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port)
