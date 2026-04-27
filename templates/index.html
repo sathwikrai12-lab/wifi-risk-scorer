@@ -3,96 +3,404 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeHop — Wi-Fi Risk Scanner</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
+<title>SafeHop — Network Risk Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-body{background:#0c0c0e;color:#fff;font-family:Arial;padding:20px}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --page:#f5f4f0;--surface:#ffffff;--surface2:#faf9f6;--surface3:#f0efe9;
+  --border:#e4e2da;--border2:#d0cec4;
+  --ink:#1c1c1e;--ink2:#5c5b60;--ink3:#9b9a9f;--ink4:#c8c7cc;
+  --blue:#1d5aff;--blue-bg:#f0f4ff;--blue-border:#c5d3ff;
+  --green:#0a8a3c;--green-bg:#f0faf4;--green-border:#a3d9b8;
+  --amber:#b45309;--amber-bg:#fffbf0;--amber-border:#f0d080;
+  --red:#c62828;--red-bg:#fff5f5;--red-border:#f5b8b8;
+  --sans:'Geist',sans-serif;--mono:'Geist Mono',monospace;
+  --r:7px;--r2:11px;--r3:15px;
+}
+html,body{height:100%;font-family:var(--sans);background:var(--page);color:var(--ink);font-size:14px;-webkit-font-smoothing:antialiased}
 
-/* keep your existing styles (shortened here for clarity) */
-.scan-btn{padding:10px 18px;border-radius:6px;border:none;cursor:pointer}
-.card{background:#1a1a1f;padding:15px;border-radius:10px;margin-top:15px}
+/* TOPBAR */
+.topbar{height:50px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:9px}
+.logo-sq{width:26px;height:26px;background:var(--ink);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600;letter-spacing:-0.5px}
+.logo-name{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-0.3px}
+.logo-name b{color:var(--blue)}
+.topbar-center{display:flex;gap:2px}
+.tnav{font-size:12px;padding:5px 12px;border-radius:20px;color:var(--ink3);cursor:pointer;transition:.15s;font-weight:500;border:none;background:none;font-family:var(--sans)}
+.tnav:hover{background:var(--surface3);color:var(--ink2)}
+.tnav.on{background:var(--surface3);color:var(--ink)}
+.topbar-right{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink3)}
+.live{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:290px 1fr;height:calc(100vh - 50px);overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;padding:0}
+.sb-block{padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+.sb-label{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:12px}
+.field{margin-bottom:11px}
+.field:last-child{margin-bottom:0}
+.f-label{font-size:12px;color:var(--ink2);margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.ssid-in{width:100%;border:1px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:12px;font-family:var(--mono);color:var(--ink);background:var(--surface2);outline:none;transition:.15s}
+.ssid-in:focus{border-color:var(--blue);background:#fff}
+.ssid-in::placeholder{color:var(--ink4)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--border);color:var(--ink3);cursor:pointer;background:var(--surface2);font-weight:500;transition:.12s;user-select:none}
+.chip:hover{border-color:var(--border2);color:var(--ink2)}
+.chip.on{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+
+/* TOGGLES */
+.trow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--surface3)}
+.trow:last-child{border-bottom:none}
+.t-label{font-size:12px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.sw{width:32px;height:17px;border-radius:9px;background:var(--border);position:relative;cursor:pointer;transition:.2s;flex-shrink:0;border:none;outline:none}
+.sw.on{background:var(--blue)}
+.sw-k{position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.sw.on .sw-k{left:17px}
+
+/* RUN BUTTON */
+.run-btn{width:100%;padding:10px;background:var(--ink);border:none;border-radius:var(--r);color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;transition:.15s;margin-top:2px}
+.run-btn:hover{background:#2a2a2e}
+.run-btn:active{transform:scale(.99)}
+.run-btn.loading{background:#555;cursor:not-allowed}
+
+/* SPEEDOMETER */
+.speed-wrap{display:flex;flex-direction:column;align-items:center;padding:4px 0 8px}
+.speed-title{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:8px}
+.speed-svg{display:block}
+.speed-val{text-align:center;margin-top:4px}
+.speed-num{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--ink);line-height:1}
+.speed-unit{font-size:10px;color:var(--ink3);margin-top:1px;font-family:var(--mono)}
+.speed-btn{width:100%;margin-top:8px;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--ink2);font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:.15s}
+.speed-btn:hover{background:var(--surface3);color:var(--ink)}
+
+/* MAIN */
+.main{padding:20px;overflow-y:auto;background:var(--page);display:flex;flex-direction:column;gap:14px}
+
+/* IDLE */
+.idle{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:12px;text-align:center;padding:60px 40px;color:var(--ink3)}
+.idle-icon{width:48px;height:48px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:4px}
+.idle p{font-size:13px;color:var(--ink3);line-height:1.6;max-width:260px}
+
+/* PILLS */
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--mono);color:var(--ink2);background:var(--surface);border:1px solid var(--border);border-radius:5px;padding:4px 9px}
+.pill-k{color:var(--ink3);font-size:9px;text-transform:uppercase;letter-spacing:.5px;margin-right:1px}
+.pill.good{border-color:var(--green-border);color:var(--green);background:var(--green-bg)}
+.pill.warn{border-color:var(--amber-border);color:var(--amber);background:var(--amber-bg)}
+.pill.bad{border-color:var(--red-border);color:var(--red);background:var(--red-bg)}
+
+/* TOP METRICS */
+.top3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px;border-top:3px solid var(--border)}
+.mc.safe{border-top-color:var(--green)}
+.mc.warn{border-top-color:var(--amber)}
+.mc.danger{border-top-color:var(--red)}
+.mc-label{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:9px}
+.mc-val{font-size:28px;font-weight:600;font-family:var(--mono);color:var(--ink);line-height:1;letter-spacing:-1px}
+.mc.safe .mc-val{color:var(--green)}
+.mc.warn .mc-val{color:var(--amber)}
+.mc.danger .mc-val{color:var(--red)}
+.mc-sub{font-size:11px;color:var(--ink3);margin-top:4px}
+
+/* SCORE + BREAKDOWN ROW */
+.score-row{display:grid;grid-template-columns:200px 1fr 1fr;gap:10px}
+
+/* RING CARD */
+.ring-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-wrap{position:relative;width:130px;height:130px;margin-bottom:10px}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--surface3);stroke-width:9}
+.ring-fill{fill:none;stroke-width:9;stroke-linecap:round;stroke-dasharray:345;stroke-dashoffset:345;transition:stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1),stroke .4s}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-num{font-size:34px;font-weight:600;font-family:var(--mono);line-height:1;letter-spacing:-2px}
+.ring-denom{font-size:11px;color:var(--ink3);font-family:var(--mono);margin-top:1px}
+.ring-badge{font-size:11px;font-weight:600;padding:4px 12px;border-radius:5px;border:1px solid;letter-spacing:.3px}
+.ring-badge.safe{color:var(--green);border-color:var(--green-border);background:var(--green-bg)}
+.ring-badge.warn{color:var(--amber);border-color:var(--amber-border);background:var(--amber-bg)}
+.ring-badge.danger{color:var(--red);border-color:var(--red-border);background:var(--red-bg)}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:16px}
+.card-title{font-size:10px;font-weight:600;color:var(--ink3);letter-spacing:.07em;text-transform:uppercase;margin-bottom:13px;display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--border2);display:block}
+
+/* BARS */
+.bar-item{margin-bottom:10px}
+.bar-item:last-child{margin-bottom:0}
+.bar-hd{display:flex;justify-content:space-between;margin-bottom:4px}
+.bar-name{font-size:12px;color:var(--ink2)}
+.bar-pts{font-size:11px;font-family:var(--mono);font-weight:500}
+.bar-track{height:3px;background:var(--surface3);border-radius:2px;overflow:hidden}
+.bar-fill{height:3px;border-radius:2px;width:0;transition:width 1s cubic-bezier(.4,0,.2,1)}
+
+/* RECS */
+.rec-item{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--surface3);font-size:12px;color:var(--ink2);line-height:1.5}
+.rec-item:last-child{border-bottom:none;padding-bottom:0}
+.rec-dot{width:5px;height:5px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.rec-dot.bad{background:var(--red)}
+.rec-dot.good{background:var(--green)}
+
+/* CHECKS */
+.checks-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.chk{display:flex;align-items:center;gap:8px;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r)}
+.chk-ic{width:26px;height:26px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.chk-ic.pass{background:var(--green-bg)}
+.chk-ic.warn{background:var(--amber-bg)}
+.chk-ic.fail{background:var(--red-bg)}
+.chk-body{flex:1;min-width:0}
+.chk-name{font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chk-detail{font-size:10px;color:var(--ink3);font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chk-tag{font-size:9px;font-family:var(--mono);font-weight:500;padding:2px 6px;border-radius:3px;flex-shrink:0;text-transform:uppercase;letter-spacing:.4px}
+.chk-tag.pass{color:var(--green);background:var(--green-bg)}
+.chk-tag.warn{color:var(--amber);background:var(--amber-bg)}
+.chk-tag.fail{color:var(--red);background:var(--red-bg)}
+
+/* EXTRA SCANS ROW */
+.extra-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.extra-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px;text-align:center}
+.extra-icon{font-size:18px;margin-bottom:5px}
+.extra-label{font-size:10px;color:var(--ink3);margin-bottom:4px;font-weight:500}
+.extra-val{font-size:13px;font-weight:600;font-family:var(--mono);color:var(--ink)}
+.extra-val.good{color:var(--green)}
+.extra-val.warn{color:var(--amber)}
+.extra-val.bad{color:var(--red)}
+
+/* ACTION BUTTONS */
+.action-row{display:flex;gap:10px;flex-wrap:wrap}
+.action-btn{flex:1;min-width:180px;padding:12px 16px;border-radius:var(--r);border:1px solid var(--border);background:var(--surface);cursor:pointer;text-align:left;font-family:var(--sans);transition:.15s}
+.action-btn:hover{background:var(--surface2);border-color:var(--border2)}
+.action-btn-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.action-btn-sub{font-size:11px;color:var(--ink3);line-height:1.4}
+.action-btn.primary{background:var(--blue-bg);border-color:var(--blue-border)}
+.action-btn.primary .action-btn-title{color:var(--blue)}
+.action-btn.primary:hover{background:#e8edff}
+
+/* SHARE BAR */
+.share-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:11px 14px}
+.share-left{font-size:12px;color:var(--ink2)}
+.share-left strong{color:var(--ink);font-weight:600}
+.share-btns{display:flex;gap:7px}
+.share-btn{font-size:12px;font-family:var(--sans);color:var(--ink2);background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:6px 13px;cursor:pointer;transition:.15s;font-weight:500}
+.share-btn:hover{background:var(--surface3);color:var(--ink);border-color:var(--border2)}
+.share-btn.cta{background:var(--ink);color:#fff;border-color:var(--ink)}
+.share-btn.cta:hover{background:#2a2a2e}
+
+/* HISTORY */
+.h-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--surface3)}
+.h-row:last-child{border-bottom:none}
+.h-ip{font-size:11px;font-family:var(--mono);color:var(--ink2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.h-loc{font-size:11px;color:var(--ink3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.h-score{font-size:12px;font-family:var(--mono);font-weight:500;flex-shrink:0}
+.h-badge{font-size:9px;font-family:var(--mono);font-weight:600;padding:2px 7px;border-radius:3px;flex-shrink:0;text-transform:uppercase;letter-spacing:.4px}
+.h-badge.safe{color:var(--green);background:var(--green-bg)}
+.h-badge.warn{color:var(--amber);background:var(--amber-bg)}
+.h-badge.danger{color:var(--red);background:var(--red-bg)}
+.h-time{font-size:10px;color:var(--ink3);font-family:var(--mono);flex-shrink:0}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:var(--r3);max-width:560px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-head{padding:20px 24px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);padding-bottom:16px}
+.modal-title{font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.3px}
+.modal-sub{font-size:12px;color:var(--ink3);margin-top:3px}
+.modal-close{background:var(--surface2);border:1px solid var(--border);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--ink2)}
+.modal-body{padding:20px 24px 24px}
+.guide-step{display:flex;gap:14px;margin-bottom:18px}
+.guide-step:last-child{margin-bottom:0}
+.guide-num{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.guide-content{}
+.guide-heading{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:4px}
+.guide-text{font-size:12px;color:var(--ink2);line-height:1.6}
+.guide-tip{font-size:11px;color:var(--blue);background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:5px;padding:6px 10px;margin-top:6px;font-family:var(--mono)}
+
+/* MANUAL MODAL */
+.manual-field{margin-bottom:14px}
+.manual-label{font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:6px}
+.manual-chips{display:flex;flex-wrap:wrap;gap:5px}
+.manual-run{width:100%;padding:11px;background:var(--ink);border:none;border-radius:var(--r);color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;margin-top:4px;transition:.15s}
+.manual-run:hover{background:#2a2a2e}
+.manual-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--surface3)}
+.manual-toggle-row:last-of-type{border-bottom:none}
+
+/* RESCAN */
+.rescan-row{display:flex;align-items:center;justify-content:space-between}
+.scan-time{font-size:11px;color:var(--ink3);font-family:var(--mono)}
+.rescan-btn{font-size:12px;color:var(--blue);background:none;border:none;cursor:pointer;font-family:var(--sans);font-weight:500;text-decoration:underline;text-underline-offset:3px}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(70px);background:var(--ink);color:#fff;border-radius:var(--r);padding:9px 16px;font-size:12px;transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* STATS */
+.stats-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px}
+.stat-item{text-align:center}
+.stat-val{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--ink);line-height:1}
+.stat-key{font-size:9px;color:var(--ink3);font-family:var(--mono);letter-spacing:.5px;text-transform:uppercase;margin-top:3px}
+
+@media(max-width:720px){
+  .layout{grid-template-columns:1fr;height:auto;overflow:visible}
+  .sidebar{height:auto}
+  .top3{grid-template-columns:1fr 1fr}
+  .score-row{grid-template-columns:1fr}
+  .checks-grid{grid-template-columns:1fr}
+  .extra-grid{grid-template-columns:repeat(3,1fr)}
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
-
 <body>
 
-<h2>SafeHop WiFi Scanner</h2>
-
-<button class="scan-btn" onclick="runScan()">Scan</button>
-
-<!-- 🔥 NEW BUTTONS -->
-<div style="margin-top:10px">
-  <button class="scan-btn" onclick="showProtectionGuide()" style="background:#2563eb;color:white">
-    🛡️ Secure My Device
-  </button>
-
-  <button class="scan-btn" onclick="manualCheck()" style="background:#f59e0b;color:black">
-    ⚙️ Manual Check
-  </button>
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-sq">SH</div>
+    <div class="logo-name">Safe<b>Hop</b></div>
+  </div>
+  <div class="topbar-center">
+    <button class="tnav on" onclick="showTab('scan',this)">Scanner</button>
+    <button class="tnav" onclick="showTab('history',this)">History</button>
+  </div>
+  <div class="topbar-right">
+    <div class="live"></div>
+    <span>Live detection</span>
+  </div>
 </div>
 
-<!-- RESULTS -->
-<div id="result" class="card"></div>
+<div class="layout">
 
-<!-- 🔥 SPEED METER -->
-<div class="card">
-  <h4>Network Speed</h4>
-  <div id="speed-meter" style="font-size:40px">0 Mbps</div>
-</div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
 
-<script>
+    <!-- Speed meter -->
+    <div class="sb-block">
+      <div class="speed-wrap">
+        <div class="speed-title">Connection Speed</div>
+        <svg class="speed-svg" width="160" height="90" viewBox="0 0 160 90">
+          <defs>
+            <linearGradient id="sg" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#22c55e"/>
+              <stop offset="50%" stop-color="#f59e0b"/>
+              <stop offset="100%" stop-color="#ef4444"/>
+            </linearGradient>
+          </defs>
+          <path d="M 16 82 A 64 64 0 0 1 144 82" fill="none" stroke="#f0efe9" stroke-width="10" stroke-linecap="round"/>
+          <path d="M 16 82 A 64 64 0 0 1 144 82" fill="none" stroke="url(#sg)" stroke-width="10" stroke-linecap="round" opacity="0.25"/>
+          <line id="needle" x1="80" y1="82" x2="80" y2="28" stroke="#1c1c1e" stroke-width="2.5" stroke-linecap="round" transform="rotate(0,80,82)"/>
+          <circle cx="80" cy="82" r="5" fill="#1c1c1e"/>
+          <text x="14" y="90" font-size="9" fill="#9b9a9f" font-family="monospace">0</text>
+          <text x="72" y="22" font-size="9" fill="#9b9a9f" font-family="monospace" text-anchor="middle">↑</text>
+          <text x="140" y="90" font-size="9" fill="#9b9a9f" font-family="monospace" text-anchor="end">100</text>
+        </svg>
+        <div class="speed-val">
+          <div class="speed-num" id="speed-num">—</div>
+          <div class="speed-unit">Mbps estimated</div>
+        </div>
+        <button class="speed-btn" onclick="testSpeed()">▶ Test speed</button>
+      </div>
+    </div>
 
-function runScan(){
-  fetch('/auto-scan')
-  .then(r=>r.json())
-  .then(data=>{
-    document.getElementById("result").innerText =
-      "Risk: " + data.risk + " (" + data.level + ")";
+    <!-- Network details -->
+    <div class="sb-block">
+      <div class="sb-label">Network</div>
+      <div class="field">
+        <div class="f-label">SSID / Network name</div>
+        <input class="ssid-in" type="text" id="ssid" placeholder="e.g. Airport_Free_WiFi" maxlength="32">
+      </div>
+      <div class="field">
+        <div class="f-label">Encryption</div>
+        <div class="chips" id="enc-group">
+          <div class="chip on" data-val="open" onclick="pick('enc-group',this,'enc')">Open</div>
+          <div class="chip" data-val="wep" onclick="pick('enc-group',this,'enc')">WEP</div>
+          <div class="chip" data-val="wpa" onclick="pick('enc-group',this,'enc')">WPA</div>
+          <div class="chip" data-val="wpa3" onclick="pick('enc-group',this,'enc')">WPA3</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="f-label">Password</div>
+        <div class="chips" id="pwd-group">
+          <div class="chip on" data-val="none" onclick="pick('pwd-group',this,'pwd')">None</div>
+          <div class="chip" data-val="weak" onclick="pick('pwd-group',this,'pwd')">Weak</div>
+          <div class="chip" data-val="strong" onclick="pick('pwd-group',this,'pwd')">Strong</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="f-label">Signal</div>
+        <div class="chips" id="sig-group">
+          <div class="chip" data-val="weak" onclick="pick('sig-group',this,'sig')">Weak</div>
+          <div class="chip on" data-val="moderate" onclick="pick('sig-group',this,'sig')">Fair</div>
+          <div class="chip" data-val="strong" onclick="pick('sig-group',this,'sig')">Strong</div>
+          <div class="chip" data-val="very_strong" onclick="pick('sig-group',this,'sig')">Max</div>
+        </div>
+      </div>
+      <div class="field">
+        <div class="f-label">Location type</div>
+        <div class="chips" id="loc-group">
+          <div class="chip on" data-val="airport" onclick="pick('loc-group',this,'loc')">Airport</div>
+          <div class="chip" data-val="cafe" onclick="pick('loc-group',this,'loc')">Cafe</div>
+          <div class="chip" data-val="hotel" onclick="pick('loc-group',this,'loc')">Hotel</div>
+          <div class="chip" data-val="home" onclick="pick('loc-group',this,'loc')">Home</div>
+        </div>
+      </div>
+    </div>
 
-    simulateSpeed();
-  });
-}
+    <!-- Security flags -->
+    <div class="sb-block">
+      <div class="sb-label">Security flags</div>
+      <div class="trow"><div class="t-label">HTTPS active</div><button class="sw" id="sw-https" onclick="swTog('sw-https','https')"><div class="sw-k"></div></button></div>
+      <div class="trow"><div class="t-label">Known / trusted network</div><button class="sw" id="sw-known" onclick="swTog('sw-known','known')"><div class="sw-k"></div></button></div>
+      <div class="trow"><div class="t-label">VPN enabled</div><button class="sw" id="sw-vpn" onclick="swTog('sw-vpn','vpn')"><div class="sw-k"></div></button></div>
+      <div class="trow"><div class="t-label">Firewall on</div><button class="sw" id="sw-firewall" onclick="swTog('sw-firewall','firewall')"><div class="sw-k"></div></button></div>
+      <div class="trow"><div class="t-label">Crowded network</div><button class="sw" id="sw-crowded" onclick="swTog('sw-crowded','crowded')"><div class="sw-k"></div></button></div>
+    </div>
 
-/* 🔥 SPEED */
-function simulateSpeed(){
-  let max = Math.floor(Math.random()*120)+20;
-  let count = 0;
-  let el = document.getElementById("speed-meter");
+    <div class="sb-block">
+      <button class="run-btn" id="run-btn" onclick="runScan()">Run security scan</button>
+    </div>
 
-  let i=setInterval(()=>{
-    count+=2;
-    el.innerText=count+" Mbps";
-    if(count>=max) clearInterval(i);
-  },20);
-}
+  </aside>
 
-/* 🔐 GUIDE */
-function showProtectionGuide(){
-alert(`🔐 PROTECT YOUR DEVICE
+  <!-- MAIN -->
+  <main class="main" id="main">
 
-1. Use VPN
-2. Avoid banking
-3. Use HTTPS
-4. Turn off sharing
-5. Enable firewall
-6. Update system
-7. Avoid unknown WiFi`);
-}
+    <!-- SCAN TAB -->
+    <div id="tab-scan">
+      <div class="idle" id="idle">
+        <div class="idle-icon">📡</div>
+        <p>Set your network details in the panel and run a scan to get a full security report.</p>
+      </div>
 
-/* ⚙️ MANUAL CHECK */
-function manualCheck(){
-alert(`⚙️ MANUAL CHECK
+      <div id="results" style="display:none;flex-direction:column;gap:13px">
 
-✔ Enable VPN
-✔ Firewall ON
-✔ Antivirus
-✔ Remove unknown WiFi
-✔ Use HTTPS`);
-}
+        <div class="rescan-row">
+          <div class="scan-time" id="scan-time"></div>
+          <button class="rescan-btn" onclick="runScan()">↻ Scan again</button>
+        </div>
 
-</script>
+        <!-- Detected pills -->
+        <div class="pills" id="pills"></div>
 
-</body>
-</html>
+        <!-- Top 3 metrics -->
+        <div class="top3">
+          <div class="mc" id="mc-score"><div class="mc-label">Risk score</div><div class="mc-val" id="mv-score">0</div><div class="mc-sub">out of 100</div></div>
+          <div class="mc" id="mc-grade"><div class="mc-label">Grade</div><div class="mc-val" id="mv-grade">—</div><div class="mc-sub">security rating</div></div>
+          <div class="mc" id="mc-level"><div class="mc-label">Level</div><div class="mc-val" id="mv-level" style="font-size:17px;margin-top:5px">—</div><div class="mc-sub" id="mv-summary">—</div></div>
+        </div>
+
+        <!-- Score ring + breakdown + recs + threat insights -->
+        <div class="score-row">
+          <div class="ring-card">
+            <div class="ring-wrap">
+              <svg width="130" height="130" viewBox="0 0 130 130">
+                <circle class="ring-bg" cx="65" cy="65" r="55"/>
+                <circle class="ring-fill" id="ring-fill" cx="65" cy="65" r="55"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-num" id="ring-num">0</div>
+                <div class="ring-denom">/100</div>
+              </div>
+            </div>
+           
