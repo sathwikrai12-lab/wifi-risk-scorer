@@ -1,30 +1,29 @@
 import os
+import hashlib
+import json
+from datetime import datetime, timezone
 import requests
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
+# ── IP INFO ──────────────────────────────────────────────────────────────────
+
 def get_ip_info(ip):
     """Try multiple free IP APIs in order until one works"""
     clean_ip = ip.split(',')[0].strip()
-
-    # If local, get public IP info instead
     is_local = clean_ip in ('127.0.0.1', '::1', 'localhost')
 
     apis = [
-        # API 1: ip-api.com (very reliable, no key needed)
         lambda: requests.get(
-            f'http://ip-api.com/json/{("" if is_local else clean_ip)}?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting',
+            f'http://ip-api.com/json/{("" if is_local else clean_ip)}'
+            f'?fields=status,message,country,countryCode,regionName,city,zip,lat,lon,timezone,isp,org,as,query,proxy,hosting',
             timeout=5
         ).json(),
-
-        # API 2: ipwho.is (good backup)
         lambda: requests.get(
             f'https://ipwho.is/{("" if is_local else clean_ip)}',
             timeout=5
         ).json(),
-
-        # API 3: ipapi.co (third fallback)
         lambda: requests.get(
             f'https://ipapi.co/{("" if is_local else clean_ip)}/json/',
             timeout=5
@@ -34,16 +33,19 @@ def get_ip_info(ip):
     for api in apis:
         try:
             data = api()
-            # Normalize different API response formats into one standard format
             normalized = normalize(data, clean_ip)
             if normalized.get('city') and normalized['city'] != 'Unknown':
                 return normalized
         except Exception:
             continue
 
-    return {'ip': clean_ip, 'city': 'Unknown', 'country': 'Unknown',
-            'isp': 'Unknown', 'org': '', 'timezone': 'Unknown',
-            'is_proxy': False, 'is_hosting': False}
+    return {
+        'ip': clean_ip, 'city': 'Unknown', 'country': 'Unknown',
+        'region': '', 'country_code': '', 'isp': 'Unknown', 'org': '',
+        'timezone': 'Unknown', 'is_proxy': False, 'is_hosting': False,
+        'lat': None, 'lon': None
+    }
+
 
 def normalize(data, ip):
     """Convert any API response into a standard dict"""
@@ -60,11 +62,14 @@ def normalize(data, ip):
             'timezone': data.get('timezone', 'Unknown'),
             'is_proxy': data.get('proxy', False),
             'is_hosting': data.get('hosting', False),
+            'lat': data.get('lat'),
+            'lon': data.get('lon'),
         }
 
     # ipwho.is format
     if 'connection' in data:
         conn = data.get('connection', {})
+        tz = data.get('timezone', {})
         return {
             'ip': data.get('ip', ip),
             'city': data.get('city', 'Unknown'),
@@ -73,9 +78,11 @@ def normalize(data, ip):
             'country_code': data.get('country_code', ''),
             'isp': conn.get('isp', 'Unknown'),
             'org': conn.get('org', ''),
-            'timezone': data.get('timezone', {}).get('id', 'Unknown') if isinstance(data.get('timezone'), dict) else str(data.get('timezone', 'Unknown')),
+            'timezone': tz.get('id', 'Unknown') if isinstance(tz, dict) else str(tz or 'Unknown'),
             'is_proxy': data.get('security', {}).get('proxy', False),
             'is_hosting': data.get('security', {}).get('hosting', False),
+            'lat': data.get('latitude'),
+            'lon': data.get('longitude'),
         }
 
     # ipapi.co format
@@ -90,20 +97,43 @@ def normalize(data, ip):
         'timezone': data.get('timezone', 'Unknown'),
         'is_proxy': False,
         'is_hosting': False,
+        'lat': data.get('latitude'),
+        'lon': data.get('longitude'),
     }
+
+
+# ── ANALYSIS ─────────────────────────────────────────────────────────────────
 
 def check_vpn(info):
     """Detect VPN/proxy using both API flags and org name keywords"""
     if info.get('is_proxy') or info.get('is_hosting'):
         return True
     org = (info.get('org', '') + ' ' + info.get('isp', '')).lower()
-    keywords = ['vpn', 'proxy', 'hosting', 'digitalocean', 'linode', 'vultr',
-                'amazon', 'google cloud', 'microsoft azure', 'cloudflare',
-                'mullvad', 'nordvpn', 'expressvpn', 'private internet',
-                'datacenter', 'data center', 'server', 'hetzner', 'ovh']
+    keywords = [
+        'vpn', 'proxy', 'hosting', 'digitalocean', 'linode', 'vultr',
+        'amazon', 'google cloud', 'microsoft azure', 'cloudflare',
+        'mullvad', 'nordvpn', 'expressvpn', 'private internet',
+        'datacenter', 'data center', 'server', 'hetzner', 'ovh',
+        'fastly', 'akamai', 'cdn', 'relay',
+    ]
     return any(k in org for k in keywords)
 
-def score_connection(info, is_https, vpn_detected):
+
+def get_ua_risk(ua):
+    """Assess risk signals from User-Agent string"""
+    if not ua:
+        return {'label': 'Unknown client', 'risk': 5}
+    ua_lower = ua.lower()
+    if 'curl' in ua_lower or 'python' in ua_lower or 'wget' in ua_lower:
+        return {'label': 'Script / automation', 'risk': 10}
+    if 'tor' in ua_lower:
+        return {'label': 'Tor browser', 'risk': 0}
+    if 'mobile' in ua_lower or 'android' in ua_lower or 'iphone' in ua_lower:
+        return {'label': 'Mobile browser', 'risk': 2}
+    return {'label': 'Desktop browser', 'risk': 0}
+
+
+def score_connection(info, is_https, vpn_detected, ua_risk):
     score = 0
     breakdown = []
     recommendations = []
@@ -129,14 +159,14 @@ def score_connection(info, is_https, vpn_detected):
     # 3. ISP type risk (max 20)
     isp = info.get('isp', '').lower()
     isp_score = 0
-    mobile_keywords = ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vi ', 'vodafone', 'idea', 'aircel']
-    public_keywords = ['comcast', 'at&t', 'verizon', 'spectrum', 'cox', 'public']
-    if any(k in isp for k in mobile_keywords):
+    mobile_kw = ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vi ', 'vodafone', 'idea', 'aircel', 'reliance']
+    public_kw = ['comcast', 'at&t', 'verizon', 'spectrum', 'cox', 'public', 'municipal']
+    if any(k in isp for k in mobile_kw):
         isp_score = 8
-        recommendations.append({'type': 'bad', 'text': f'Mobile carrier detected ({info.get("isp","")}) — mobile data is generally safer than public Wi-Fi but not private.'})
-    elif any(k in isp for k in public_keywords):
+        recommendations.append({'type': 'bad', 'text': f'Mobile carrier ({info.get("isp","")}) — safer than public Wi-Fi but not private.'})
+    elif any(k in isp for k in public_kw):
         isp_score = 12
-        recommendations.append({'type': 'bad', 'text': f'Public ISP ({info.get("isp","")}) — use a VPN on shared or public networks.'})
+        recommendations.append({'type': 'bad', 'text': f'Public ISP ({info.get("isp","")}) — use a VPN on shared networks.'})
     else:
         recommendations.append({'type': 'good', 'text': f'ISP ({info.get("isp","Unknown")}) appears to be a standard carrier.'})
     score += isp_score
@@ -144,22 +174,28 @@ def score_connection(info, is_https, vpn_detected):
 
     # 4. Country risk (max 15)
     country = info.get('country', 'Unknown')
-    high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus']
+    high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus', 'Syria', 'Cuba']
+    med_risk = ['Turkey', 'Pakistan', 'Kazakhstan', 'Uzbekistan']
     if country in high_risk:
         score += 15
         breakdown.append({'label': 'Region risk', 'points': 15, 'max': 15})
-        recommendations.append({'type': 'bad', 'text': f'Connecting from {country} — higher risk of government surveillance and censorship.'})
+        recommendations.append({'type': 'bad', 'text': f'Connecting from {country} — elevated risk of surveillance and censorship.'})
+    elif country in med_risk:
+        score += 7
+        breakdown.append({'label': 'Region risk', 'points': 7, 'max': 15})
+        recommendations.append({'type': 'bad', 'text': f'Connecting from {country} — moderate regional risk level.'})
     else:
         breakdown.append({'label': 'Region risk', 'points': 0, 'max': 15})
         recommendations.append({'type': 'good', 'text': f'Connecting from {country} — standard regional risk level.'})
 
-    # 5. Proxy/datacenter (max 20)
+    # 5. Hosting / datacenter (max 20)
     if info.get('is_hosting'):
         score += 10
         breakdown.append({'label': 'Network type', 'points': 10, 'max': 20})
-        recommendations.append({'type': 'bad', 'text': 'Traffic is routed through a datacenter — could be a shared or commercial proxy.'})
+        recommendations.append({'type': 'bad', 'text': 'Traffic routed through a datacenter — could be a shared or commercial proxy.'})
     else:
         breakdown.append({'label': 'Network type', 'points': 0, 'max': 20})
+        recommendations.append({'type': 'good', 'text': 'Residential/consumer network — no datacenter routing detected.'})
 
     score = max(0, min(100, score))
     level = 'Safe' if score <= 30 else 'Moderate' if score <= 60 else 'Dangerous'
@@ -169,37 +205,71 @@ def score_connection(info, is_https, vpn_detected):
         'risk': score, 'level': level, 'grade': grade,
         'threats': sum(1 for r in recommendations if r['type'] == 'bad'),
         'protections': sum(1 for r in recommendations if r['type'] == 'good'),
-        'breakdown': breakdown, 'recommendations': recommendations
+        'breakdown': breakdown,
+        'recommendations': recommendations,
     }
+
+
+def generate_share_id(data):
+    """Create a short shareable hash for the scan result"""
+    payload = json.dumps({
+        'ip': data.get('ip', ''),
+        'ts': datetime.now(timezone.utc).isoformat(),
+    }, sort_keys=True)
+    return hashlib.sha256(payload.encode()).hexdigest()[:10]
+
+
+# ── ROUTES ───────────────────────────────────────────────────────────────────
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
+
 @app.route('/auto-scan')
 def auto_scan():
-    ip = (request.headers.get('X-Forwarded-For') or
-          request.headers.get('X-Real-IP') or
-          request.remote_addr or '127.0.0.1')
-
-    is_https = (request.headers.get('X-Forwarded-Proto', 'http') == 'https'
-                or request.url.startswith('https'))
+    ip = (
+        request.headers.get('X-Forwarded-For') or
+        request.headers.get('X-Real-IP') or
+        request.remote_addr or
+        '127.0.0.1'
+    )
+    is_https = (
+        request.headers.get('X-Forwarded-Proto', 'http') == 'https' or
+        request.url.startswith('https')
+    )
+    ua = request.headers.get('User-Agent', '')
 
     info = get_ip_info(ip)
     vpn_detected = check_vpn(info)
-    result = score_connection(info, is_https, vpn_detected)
+    ua_risk = get_ua_risk(ua)
+    result = score_connection(info, is_https, vpn_detected, ua_risk)
 
     result['detected'] = {
         'ip': info.get('ip', ip.split(',')[0].strip()),
         'isp': info.get('isp', 'Unknown'),
+        'org': info.get('org', ''),
         'city': info.get('city', 'Unknown'),
         'region': info.get('region', ''),
         'country': info.get('country', 'Unknown'),
+        'country_code': info.get('country_code', ''),
         'is_https': is_https,
         'vpn': vpn_detected,
         'timezone': info.get('timezone', 'Unknown'),
+        'lat': info.get('lat'),
+        'lon': info.get('lon'),
+        'ua_label': ua_risk['label'],
     }
+    result['share_id'] = generate_share_id(result['detected'])
+    result['scan_ts'] = datetime.now(timezone.utc).isoformat()
+
     return jsonify(result)
+
+
+@app.route('/health')
+def health():
+    return jsonify({'status': 'ok', 'version': '2.0'})
+
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
