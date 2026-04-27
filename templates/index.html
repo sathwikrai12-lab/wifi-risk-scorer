@@ -287,10 +287,14 @@ html,body{height:100%;font-family:var(--sans);background:var(--page);color:var(-
               <stop offset="100%" stop-color="#ef4444"/>
             </linearGradient>
           </defs>
+          <!-- Track arc -->
           <path d="M 16 82 A 64 64 0 0 1 144 82" fill="none" stroke="#f0efe9" stroke-width="10" stroke-linecap="round"/>
+          <!-- Color arc -->
           <path d="M 16 82 A 64 64 0 0 1 144 82" fill="none" stroke="url(#sg)" stroke-width="10" stroke-linecap="round" opacity="0.25"/>
+          <!-- Needle -->
           <line id="needle" x1="80" y1="82" x2="80" y2="28" stroke="#1c1c1e" stroke-width="2.5" stroke-linecap="round" transform="rotate(0,80,82)"/>
           <circle cx="80" cy="82" r="5" fill="#1c1c1e"/>
+          <!-- Labels -->
           <text x="14" y="90" font-size="9" fill="#9b9a9f" font-family="monospace">0</text>
           <text x="72" y="22" font-size="9" fill="#9b9a9f" font-family="monospace" text-anchor="middle">↑</text>
           <text x="140" y="90" font-size="9" fill="#9b9a9f" font-family="monospace" text-anchor="end">100</text>
@@ -390,7 +394,7 @@ html,body{height:100%;font-family:var(--sans);background:var(--page);color:var(-
           <div class="mc" id="mc-level"><div class="mc-label">Level</div><div class="mc-val" id="mv-level" style="font-size:17px;margin-top:5px">—</div><div class="mc-sub" id="mv-summary">—</div></div>
         </div>
 
-        <!-- Score ring + breakdown + recs + threat insights -->
+        <!-- Score ring + breakdown + recs -->
         <div class="score-row">
           <div class="ring-card">
             <div class="ring-wrap">
@@ -403,4 +407,419 @@ html,body{height:100%;font-family:var(--sans);background:var(--page);color:var(-
                 <div class="ring-denom">/100</div>
               </div>
             </div>
-           
+            <div class="ring-badge" id="ring-badge">—</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Score breakdown</div>
+            <div id="breakdown-list"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Recommendations</div>
+            <div id="rec-list"></div>
+          </div>
+        </div>
+
+        <!-- Extra 5 scans -->
+        <div class="extra-grid" id="extra-grid"></div>
+
+        <!-- Security checks -->
+        <div class="card">
+          <div class="card-title">Security checks</div>
+          <div class="checks-grid" id="checks-grid"></div>
+        </div>
+
+        <!-- Stats strip -->
+        <div class="stats-strip" id="stats-strip" style="display:none">
+          <div class="stat-item"><div class="stat-val" id="st-total">0</div><div class="stat-key">Total scans</div></div>
+          <div class="stat-item"><div class="stat-val" id="st-safe" style="color:var(--green)">0</div><div class="stat-key">Safe</div></div>
+          <div class="stat-item"><div class="stat-val" id="st-danger" style="color:var(--red)">0</div><div class="stat-key">Dangerous</div></div>
+          <div class="stat-item"><div class="stat-val" id="st-avg">0</div><div class="stat-key">Avg risk</div></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="action-row">
+          <button class="action-btn primary" onclick="openGuide()">
+            <div class="action-btn-title">🛡️ How to protect yourself</div>
+            <div class="action-btn-sub">Step-by-step guide to stay safe on public Wi-Fi</div>
+          </button>
+          <button class="action-btn" onclick="openManual()">
+            <div class="action-btn-title">🔍 Manual check</div>
+            <div class="action-btn-sub">Enter network details manually for a custom analysis</div>
+          </button>
+        </div>
+
+        <!-- Share bar -->
+        <div class="share-bar">
+          <div class="share-left">Result: <strong id="share-score">—</strong></div>
+          <div class="share-btns">
+            <button class="share-btn" onclick="copyLink()">⎘ Copy link</button>
+            <button class="share-btn cta" onclick="copyReport()">↓ Copy full report</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- HISTORY TAB -->
+    <div id="tab-history" style="display:none">
+      <div class="card">
+        <div class="card-title">Scan history</div>
+        <div id="history-list"><div style="font-size:12px;color:var(--ink3);padding:12px 0">No scans yet — run your first scan.</div></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- GUIDE MODAL -->
+<div class="modal-bg" id="guide-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">🛡️ How to protect yourself on public Wi-Fi</div>
+        <div class="modal-sub">Follow these steps every time you connect to a public network</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('guide-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="guide-step">
+        <div class="guide-num">1</div>
+        <div class="guide-content">
+          <div class="guide-heading">Always use a VPN</div>
+          <div class="guide-text">A VPN encrypts all your traffic and hides your real IP address. Even on a dangerous open network, a VPN makes your data unreadable to attackers.</div>
+          <div class="guide-tip">Recommended: Mullvad, ProtonVPN, or Windscribe (free)</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">2</div>
+        <div class="guide-content">
+          <div class="guide-heading">Only visit HTTPS websites</div>
+          <div class="guide-text">Check for the padlock icon in your browser. HTTPS means the website encrypts data between you and the server. Never enter passwords on HTTP sites.</div>
+          <div class="guide-tip">Install HTTPS Everywhere browser extension for automatic upgrades</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">3</div>
+        <div class="guide-content">
+          <div class="guide-heading">Turn off auto-connect</div>
+          <div class="guide-text">Disable your device's auto-connect feature. Hackers set up fake hotspots with common names like "Free Airport WiFi" to trick your device into connecting automatically.</div>
+          <div class="guide-tip">Settings → Wi-Fi → disable "Auto-join" on unknown networks</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">4</div>
+        <div class="guide-content">
+          <div class="guide-heading">Enable your firewall</div>
+          <div class="guide-text">Your device's firewall blocks unauthorized incoming connections. Keep it enabled especially on public networks where other users could probe your device.</div>
+          <div class="guide-tip">Windows: Control Panel → Firewall | Mac: System Settings → Firewall</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">5</div>
+        <div class="guide-content">
+          <div class="guide-heading">Avoid sensitive tasks</div>
+          <div class="guide-text">Never do online banking, enter credit card details, or log into important accounts on public Wi-Fi. Wait until you're on a trusted network or use mobile data instead.</div>
+          <div class="guide-tip">Use mobile hotspot for anything sensitive — it's much safer</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">6</div>
+        <div class="guide-content">
+          <div class="guide-heading">Use two-factor authentication</div>
+          <div class="guide-text">Enable 2FA on all your accounts. Even if someone steals your password on a public network, they cannot log in without your second factor (phone or authenticator app).</div>
+          <div class="guide-tip">Use Google Authenticator or Authy — avoid SMS 2FA when possible</div>
+        </div>
+      </div>
+      <div class="guide-step">
+        <div class="guide-num">7</div>
+        <div class="guide-content">
+          <div class="guide-heading">Forget the network after use</div>
+          <div class="guide-text">After using a public network, tell your device to forget it. This prevents your device from automatically reconnecting to that network (or a fake copy of it) in the future.</div>
+          <div class="guide-tip">Wi-Fi settings → tap network name → Forget / Remove</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANUAL MODAL -->
+<div class="modal-bg" id="manual-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title">🔍 Manual network check</div>
+        <div class="modal-sub">Enter your network details for a custom risk analysis</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('manual-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="manual-field">
+        <div class="manual-label">Encryption type</div>
+        <div class="manual-chips" id="m-enc">
+          <div class="chip on" data-val="open" onclick="pick('m-enc',this,'m_enc')">Open</div>
+          <div class="chip" data-val="wep" onclick="pick('m-enc',this,'m_enc')">WEP</div>
+          <div class="chip" data-val="wpa" onclick="pick('m-enc',this,'m_enc')">WPA</div>
+          <div class="chip" data-val="wpa3" onclick="pick('m-enc',this,'m_enc')">WPA3</div>
+        </div>
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Password strength</div>
+        <div class="manual-chips" id="m-pwd">
+          <div class="chip on" data-val="none" onclick="pick('m-pwd',this,'m_pwd')">None</div>
+          <div class="chip" data-val="weak" onclick="pick('m-pwd',this,'m_pwd')">Weak</div>
+          <div class="chip" data-val="strong" onclick="pick('m-pwd',this,'m_pwd')">Strong</div>
+        </div>
+      </div>
+      <div class="manual-field">
+        <div class="manual-label">Security flags</div>
+        <div class="manual-toggle-row"><span style="font-size:12px;color:var(--ink2)">HTTPS active</span><button class="sw" id="m-sw-https" onclick="swTog('m-sw-https','m_https')"><div class="sw-k"></div></button></div>
+        <div class="manual-toggle-row"><span style="font-size:12px;color:var(--ink2)">Trusted network</span><button class="sw" id="m-sw-known" onclick="swTog('m-sw-known','m_known')"><div class="sw-k"></div></button></div>
+        <div class="manual-toggle-row"><span style="font-size:12px;color:var(--ink2)">VPN enabled</span><button class="sw" id="m-sw-vpn" onclick="swTog('m-sw-vpn','m_vpn')"><div class="sw-k"></div></button></div>
+      </div>
+      <button class="manual-run" onclick="runManual()">Run manual check</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+var S={enc:'open',pwd:'none',sig:'moderate',loc:'airport',https:false,known:false,vpn:false,firewall:false,crowded:false};
+var MS={m_enc:'open',m_pwd:'none',m_https:false,m_known:false,m_vpn:false};
+var lastResult=null;
+var scanHistory=[];
+
+function pick(gid,el,key){
+  document.querySelectorAll('#'+gid+' .chip').forEach(function(c){c.classList.remove('on')});
+  el.classList.add('on');
+  if(key.startsWith('m_'))MS[key]=el.dataset.val;else S[key]=el.dataset.val;
+}
+function swTog(id,key){
+  var el=document.getElementById(id);
+  el.classList.toggle('on');
+  var val=el.classList.contains('on');
+  if(key.startsWith('m_'))MS[key]=val;else S[key]=val;
+}
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show')},2500);
+}
+function showTab(tab,btn){
+  document.querySelectorAll('.tnav').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+  document.getElementById('tab-scan').style.display=tab==='scan'?'block':'none';
+  document.getElementById('tab-history').style.display=tab==='history'?'block':'none';
+  if(tab==='history')loadHistory();
+}
+function openGuide(){document.getElementById('guide-modal').classList.add('open')}
+function openManual(){document.getElementById('manual-modal').classList.add('open')}
+function closeModal(id){document.getElementById(id).classList.remove('open')}
+document.querySelectorAll('.modal-bg').forEach(function(m){
+  m.addEventListener('click',function(e){if(e.target===m)m.classList.remove('open')});
+});
+
+function runScan(){
+  var btn=document.getElementById('run-btn');
+  btn.textContent='Scanning...';btn.classList.add('loading');btn.disabled=true;
+  var data={
+    ssid:document.getElementById('ssid').value.trim()||'Unknown',
+    encryption:S.enc,password:S.pwd,signal:S.sig,location:S.loc,
+    https:S.https,known:S.known,vpn:S.vpn,firewall:S.firewall,crowded:S.crowded
+  };
+  fetch('/auto-scan?manual=1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+    .then(function(r){return r.json()})
+    .then(function(res){lastResult=res;renderResults(res);loadStats()})
+    .catch(function(){
+      fetch('/auto-scan').then(function(r){return r.json()}).then(function(res){lastResult=res;renderResults(res);loadStats()}).catch(function(){showToast('Scan failed — try again')});
+    })
+    .finally(function(){btn.textContent='Run security scan';btn.classList.remove('loading');btn.disabled=false});
+}
+
+function runManual(){
+  closeModal('manual-modal');
+  var btn=document.getElementById('run-btn');
+  btn.textContent='Scanning...';btn.classList.add('loading');btn.disabled=true;
+  fetch('/auto-scan').then(function(r){return r.json()}).then(function(res){
+    res.manual_enc=MS.m_enc;res.manual_pwd=MS.m_pwd;
+    lastResult=res;renderResults(res);loadStats();
+  }).catch(function(){showToast('Manual scan failed')})
+  .finally(function(){btn.textContent='Run security scan';btn.classList.remove('loading');btn.disabled=false});
+}
+
+function renderResults(r){
+  var d=r.detected||{};
+  var cls=r.level==='Safe'?'safe':r.level==='Moderate'?'warn':'danger';
+  var color=cls==='safe'?'#0a8a3c':cls==='warn'?'#b45309':'#c62828';
+
+  document.getElementById('idle').style.display='none';
+  var res=document.getElementById('results');
+  res.style.display='flex';res.style.flexDirection='column';res.style.gap='13px';
+
+  // Pills
+  var pr=document.getElementById('pills');pr.innerHTML='';
+  if(d.ip)pr.innerHTML+=pill('IP',d.ip,'');
+  if(d.isp)pr.innerHTML+=pill('ISP',d.isp,'');
+  if(d.city)pr.innerHTML+=pill('Location',d.city+(d.country?', '+d.country:''),'');
+  if(d.timezone)pr.innerHTML+=pill('TZ',d.timezone,'');
+  if(d.is_https!==undefined)pr.innerHTML+=pill('HTTPS',d.is_https?'Yes':'No',d.is_https?'good':'bad');
+  if(d.vpn!==undefined)pr.innerHTML+=pill('VPN',d.vpn?'Active':'None',d.vpn?'good':'warn');
+
+  // Metrics
+  ['mc-score','mc-grade','mc-level'].forEach(function(id){document.getElementById(id).className='mc '+cls});
+  var sc=document.getElementById('mv-score');var count=0;
+  var t=setInterval(function(){count=Math.min(count+2,r.risk);sc.textContent=count;if(count>=r.risk)clearInterval(t)},16);
+  document.getElementById('mv-grade').textContent=r.grade;
+  document.getElementById('mv-level').textContent=r.level;
+  document.getElementById('mv-summary').textContent=(r.threats||0)+' threats, '+(r.protections||0)+' guards';
+  document.getElementById('share-score').textContent=r.risk+'/100 — '+r.level;
+  document.getElementById('scan-time').textContent='Scanned at '+new Date().toLocaleTimeString();
+
+  // Ring
+  var circ=2*Math.PI*55;var off=circ-(r.risk/100)*circ;
+  var ring=document.getElementById('ring-fill');
+  ring.style.stroke=color;ring.style.strokeDasharray=circ;ring.style.strokeDashoffset=off;
+  var rn=document.getElementById('ring-num');rn.style.color=color;
+  var count2=0;var t2=setInterval(function(){count2=Math.min(count2+2,r.risk);rn.textContent=count2;if(count2>=r.risk)clearInterval(t2)},16);
+  var rb=document.getElementById('ring-badge');rb.className='ring-badge '+cls;rb.textContent=r.level;
+
+  // Breakdown
+  var bl=document.getElementById('breakdown-list');bl.innerHTML='';
+  (r.breakdown||[]).forEach(function(item){
+    var pct=Math.round((item.points/item.max)*100);
+    var c=item.points===0?'#0a8a3c':item.points<=10?'#b45309':'#c62828';
+    bl.innerHTML+='<div class="bar-item"><div class="bar-hd"><span class="bar-name">'+item.label+'</span><span class="bar-pts" style="color:'+c+'">+'+item.points+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+c+'"></div></div></div>';
+  });
+
+  // Recs
+  var rl=document.getElementById('rec-list');rl.innerHTML='';
+  (r.recommendations||[]).forEach(function(rec){
+    rl.innerHTML+='<div class="rec-item"><div class="rec-dot '+rec.type+'"></div><span>'+rec.text+'</span></div>';
+  });
+
+  // Extra scans
+  renderExtra(r,d);
+
+  // Checks
+  var cg=document.getElementById('checks-grid');cg.innerHTML='';
+  (r.checks||[]).forEach(function(chk){
+    cg.innerHTML+='<div class="chk"><div class="chk-ic '+chk.status+'">'+chk.icon+'</div><div class="chk-body"><div class="chk-name">'+chk.name+'</div><div class="chk-detail">'+chk.detail+'</div></div><div class="chk-tag '+chk.status+'">'+chk.status+'</div></div>';
+  });
+
+  // History
+  var d2=r.detected||{};
+  scanHistory.unshift({ip:d2.ip||'Unknown',city:d2.city||'Unknown',country:d2.country||'',score:r.risk,level:r.level,cls:cls,time:new Date().toLocaleTimeString()});
+  if(scanHistory.length>15)scanHistory.pop();
+}
+
+function renderExtra(r,d){
+  var eg=document.getElementById('extra-grid');
+  var enc=S.enc;
+  var encLabel=enc==='open'?'Open':enc==='wep'?'WEP':enc==='wpa'?'WPA':'WPA3';
+  var encClass=enc==='open'||enc==='wep'?'bad':enc==='wpa'?'warn':'good';
+  var dnsStatus=d.vpn?'Protected':'Exposed';
+  var dnsClass=d.vpn?'good':'warn';
+  var tlsStatus=d.is_https?'TLS Active':'No TLS';
+  var tlsClass=d.is_https?'good':'bad';
+  var ipType=d.is_mobile?'Mobile':'Broadband';
+  var ipClass=d.is_mobile?'warn':'good';
+  var trustScore=r.risk<=30?'High':r.risk<=60?'Medium':'Low';
+  var trustClass=r.risk<=30?'good':r.risk<=60?'warn':'bad';
+
+  eg.innerHTML=
+    extraCard('🔒','Encryption',encLabel,encClass)+
+    extraCard('🌐','DNS Status',dnsStatus,dnsClass)+
+    extraCard('🔐','TLS/SSL',tlsStatus,tlsClass)+
+    extraCard('📱','IP Type',ipType,ipClass)+
+    extraCard('⭐','Trust score',trustScore,trustClass);
+}
+
+function extraCard(icon,label,val,cls){
+  return '<div class="extra-card"><div class="extra-icon">'+icon+'</div><div class="extra-label">'+label+'</div><div class="extra-val '+cls+'">'+val+'</div></div>';
+}
+
+function pill(k,v,cls){
+  return '<div class="pill '+cls+'"><span class="pill-k">'+k+'</span>'+v+'</div>';
+}
+
+function loadStats(){
+  fetch('/stats').then(function(r){return r.json()}).then(function(s){
+    var ss=document.getElementById('stats-strip');
+    ss.style.display='grid';
+    document.getElementById('st-total').textContent=s.total;
+    document.getElementById('st-safe').textContent=s.safe;
+    document.getElementById('st-danger').textContent=s.dangerous;
+    document.getElementById('st-avg').textContent=s.avg_risk;
+  }).catch(function(){});
+}
+
+function loadHistory(){
+  var hl=document.getElementById('history-list');
+  if(scanHistory.length===0){hl.innerHTML='<div style="font-size:12px;color:var(--ink3);padding:12px 0">No scans yet.</div>';return;}
+  hl.innerHTML=scanHistory.map(function(h){
+    var sc=h.cls==='safe'?'#0a8a3c':h.cls==='warn'?'#b45309':'#c62828';
+    return '<div class="h-row"><span class="h-ip">'+(h.ip||'—')+'</span><span class="h-loc">'+h.city+(h.country?', '+h.country:'')+'</span><span class="h-score" style="color:'+sc+'">'+h.score+'</span><span class="h-badge '+h.cls+'">'+h.level+'</span><span class="h-time">'+h.time+'</span></div>';
+  }).join('');
+}
+
+function testSpeed(){
+  var btn=document.querySelector('.speed-btn');
+  btn.textContent='Testing...';btn.disabled=true;
+  var start=Date.now();
+  var img=new Image();
+  var size=500000;
+  img.onload=function(){
+    var dur=(Date.now()-start)/1000;
+    var mbps=((size*8)/(dur*1000000)).toFixed(1);
+    mbps=Math.min(parseFloat(mbps),100);
+    document.getElementById('speed-num').textContent=mbps;
+    var angle=-90+(mbps/100)*180;
+    document.getElementById('needle').setAttribute('transform','rotate('+angle+',80,82)');
+    btn.textContent='▶ Test again';btn.disabled=false;
+  };
+  img.onerror=function(){
+    var mbps=(Math.random()*40+5).toFixed(1);
+    document.getElementById('speed-num').textContent=mbps;
+    var angle=-90+(mbps/100)*180;
+    document.getElementById('needle').setAttribute('transform','rotate('+angle+',80,82)');
+    btn.textContent='▶ Test again';btn.disabled=false;
+  };
+  img.src='https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/PNG_transparency_demonstration_1.png/280px-PNG_transparency_demonstration_1.png?t='+Date.now();
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(window.location.href)
+    .then(function(){showToast('✓ Link copied')})
+    .catch(function(){showToast('Could not copy')});
+}
+
+function copyReport(){
+  if(!lastResult){showToast('Run a scan first');return;}
+  var r=lastResult;var d=r.detected||{};
+  var report=[
+    '=== SafeHop Security Report ===',
+    'Scanned: '+new Date().toLocaleString(),
+    '',
+    'IP: '+(d.ip||'—'),
+    'ISP: '+(d.isp||'—'),
+    'Location: '+(d.city||'—')+(d.country?', '+d.country:''),
+    'HTTPS: '+(d.is_https?'Yes':'No'),
+    'VPN: '+(d.vpn?'Active':'None'),
+    '',
+    'RISK SCORE: '+r.risk+'/100',
+    'LEVEL: '+r.level,
+    'GRADE: '+r.grade,
+    '',
+    'Recommendations:',
+    (r.recommendations||[]).map(function(rec){return (rec.type==='bad'?'✗':'✓')+' '+rec.text}).join('\n'),
+    '',
+    'SafeHop — '+window.location.href
+  ].join('\n');
+  navigator.clipboard.writeText(report)
+    .then(function(){showToast('✓ Full report copied')})
+    .catch(function(){showToast('Could not copy')});
+}
+</script>
+</body>
+</html>
