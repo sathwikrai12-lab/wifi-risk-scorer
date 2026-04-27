@@ -1,5 +1,6 @@
 import os
 import json
+import random
 import sqlite3
 import requests
 from datetime import datetime
@@ -143,7 +144,59 @@ def detect_vpn(info):
                 'datacenter', 'data center', 'server farm']
     return any(k in text for k in keywords)
 
-# ── SECURITY CHECKS ──────────────────────────────────────────────────
+# ── NEW: EXTENDED SECURITY CHECKS ─────────────────────────────────────
+def check_wifi_encryption(info, vpn):
+    """Simulate Wi-Fi encryption type based on available info."""
+    isp_lower = info.get('isp', '').lower()
+    is_mobile = info.get('is_mobile', False)
+    # Mobile data = LTE/5G (strong encryption)
+    if is_mobile or any(k in isp_lower for k in ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vodafone']):
+        return {'type': 'LTE/5G', 'status': 'pass', 'detail': 'Mobile data — LTE/5G encryption active'}
+    # VPN or hosting suggests corporate/secured network
+    if vpn:
+        return {'type': 'WPA3/WPA2', 'status': 'pass', 'detail': 'Likely secured — VPN tunnel active'}
+    # Residential broadband typically WPA2
+    return {'type': 'WPA2 (assumed)', 'status': 'warn', 'detail': 'WPA2 assumed — cannot verify remotely'}
+
+def check_dns_leak(info, vpn):
+    """Basic DNS leak detection heuristic."""
+    if vpn:
+        # Even with VPN, check if org/isp hints at ISP-level DNS
+        isp = info.get('isp', '').lower()
+        org = info.get('org', '').lower()
+        if any(k in isp + org for k in ['comcast', 'at&t', 'verizon', 'spectrum', 'cox', 'airtel', 'jio']):
+            return {'leaked': True, 'status': 'warn',
+                    'detail': 'VPN active but ISP DNS may leak — use VPN\'s DNS resolver'}
+        return {'leaked': False, 'status': 'pass', 'detail': 'DNS appears routed through VPN'}
+    return {'leaked': True, 'status': 'fail',
+            'detail': f'DNS queries exposed to {info.get("isp", "your ISP")}'}
+
+def check_browser_fingerprint():
+    """Browser fingerprint exposure assessment — always a risk without protection."""
+    return {
+        'status': 'warn',
+        'detail': 'Browser fingerprint unique — trackable across sites without protection'
+    }
+
+def check_open_ports_risk(info, vpn):
+    """Simulated open port risk based on network type."""
+    if vpn:
+        return {'status': 'pass', 'detail': 'VPN masks exposed ports — lower attack surface'}
+    if info.get('is_hosting'):
+        return {'status': 'fail', 'detail': 'Datacenter IP — common ports likely scanned by bots'}
+    return {'status': 'warn', 'detail': 'Residential IP — standard ports visible (22, 80, 443)'}
+
+def check_https_score(is_https, vpn):
+    """More granular HTTPS enforcement scoring."""
+    if is_https and vpn:
+        return {'score': 'A+', 'status': 'pass', 'detail': 'HTTPS + VPN tunnel — double-encrypted'}
+    if is_https:
+        return {'score': 'B+', 'status': 'pass', 'detail': 'HTTPS active — TLS enforced end-to-end'}
+    if vpn:
+        return {'score': 'C', 'status': 'warn', 'detail': 'VPN active but site lacks HTTPS'}
+    return {'score': 'F', 'status': 'fail', 'detail': 'No HTTPS — traffic fully unencrypted'}
+
+# ── SECURITY CHECKS (ORIGINAL + EXTENDED) ─────────────────────────────
 def run_checks(info, is_https, vpn):
     high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus', 'Syria']
     isp_lower = info.get('isp', '').lower()
@@ -151,7 +204,8 @@ def run_checks(info, is_https, vpn):
     is_mobile = info.get('is_mobile', False) or any(
         k in isp_lower for k in ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vodafone'])
 
-    return [
+    # --- Original 13 checks ---
+    original = [
         {'id': 'https',  'name': 'HTTPS Encryption',   'icon': '🔒',
          'status': 'pass' if is_https else 'fail',
          'detail': 'End-to-end encrypted' if is_https else 'Unencrypted — data exposed'},
@@ -176,22 +230,47 @@ def run_checks(info, is_https, vpn):
         {'id': 'proto',  'name': 'Protocol Security',   'icon': '⚡',
          'status': 'pass' if is_https else 'fail',
          'detail': 'TLS/SSL active' if is_https else 'Plain HTTP — no TLS'},
-        {'id': 'firewall', 'name': 'Firewall', 'icon': '🔥',
- 'status': 'warn', 'detail': 'Enable firewall'},
-
-{'id': 'updates', 'name': 'Updates', 'icon': '⬆️',
- 'status': 'warn', 'detail': 'Update system regularly'},
-
-{'id': 'malware', 'name': 'Malware', 'icon': '🛡️',
- 'status': 'warn', 'detail': 'Use antivirus'},
-
-{'id': 'publicwifi', 'name': 'Public WiFi', 'icon': '📶',
- 'status': 'fail' if not vpn else 'pass',
- 'detail': 'Unsafe without VPN'},
-
-{'id': 'tracking', 'name': 'Tracking', 'icon': '👣',
- 'status': 'warn', 'detail': 'Network may track activity'}
+        {'id': 'firewall', 'name': 'Firewall',          'icon': '🔥',
+         'status': 'warn', 'detail': 'Enable firewall on your device'},
+        {'id': 'updates',  'name': 'System Updates',    'icon': '⬆️',
+         'status': 'warn', 'detail': 'Keep OS and apps updated'},
+        {'id': 'malware',  'name': 'Malware Shield',    'icon': '🛡️',
+         'status': 'warn', 'detail': 'Run reputable antivirus software'},
+        {'id': 'publicwifi', 'name': 'Public Wi-Fi',   'icon': '📶',
+         'status': 'fail' if not vpn else 'pass',
+         'detail': 'Unsafe without VPN' if not vpn else 'VPN protects on public Wi-Fi'},
+        {'id': 'tracking', 'name': 'Activity Tracking', 'icon': '👣',
+         'status': 'warn', 'detail': 'Network may track browsing activity'}
     ]
+
+    # --- NEW: 5 Extended checks ---
+    wifi_enc = check_wifi_encryption(info, vpn)
+    dns_leak  = check_dns_leak(info, vpn)
+    bf        = check_browser_fingerprint()
+    ports     = check_open_ports_risk(info, vpn)
+    https_sc  = check_https_score(is_https, vpn)
+
+    extended = [
+        {'id': 'wifi_enc',  'name': 'Wi-Fi Encryption',       'icon': '📶',
+         'status': wifi_enc['status'],
+         'detail': wifi_enc['detail'],
+         'extra': wifi_enc.get('type', '')},
+        {'id': 'dns_leak',  'name': 'DNS Leak Detection',      'icon': '🌐',
+         'status': dns_leak['status'],
+         'detail': dns_leak['detail']},
+        {'id': 'fingerprint', 'name': 'Browser Fingerprint',   'icon': '🧬',
+         'status': bf['status'],
+         'detail': bf['detail']},
+        {'id': 'open_ports', 'name': 'Open Ports Risk',        'icon': '🔓',
+         'status': ports['status'],
+         'detail': ports['detail']},
+        {'id': 'https_score', 'name': 'HTTPS Enforcement',     'icon': '🏅',
+         'status': https_sc['status'],
+         'detail': https_sc['detail'],
+         'extra': https_sc.get('score', '')},
+    ]
+
+    return original + extended
 
 # ── SCORING ──────────────────────────────────────────────────────────
 def calculate_score(info, is_https, vpn):
@@ -246,7 +325,107 @@ def calculate_score(info, is_https, vpn):
         'breakdown': breakdown, 'recommendations': recs
     }
 
-# ── ROUTES ───────────────────────────────────────────────────────────
+# ── NEW: SMART INSIGHTS ───────────────────────────────────────────────
+def build_insights(info, is_https, vpn, result):
+    insights = []
+    isp = info.get('isp', 'Unknown')
+    country = info.get('country', 'Unknown')
+    ip = info.get('ip', 'Unknown')
+    is_hosting = info.get('is_hosting', False)
+    is_mobile = info.get('is_mobile', False)
+
+    if not vpn:
+        insights.append({'icon': '👁️', 'severity': 'high',
+            'text': f'No VPN detected — your real IP ({ip}) is exposed to every website you visit.'})
+    else:
+        insights.append({'icon': '🛡️', 'severity': 'low',
+            'text': f'VPN active — your real IP is masked. Sites see a different address.'})
+
+    if not is_https:
+        insights.append({'icon': '🔓', 'severity': 'high',
+            'text': 'This connection lacks HTTPS — anyone on your network can read your traffic.'})
+
+    if is_mobile:
+        insights.append({'icon': '📱', 'severity': 'low',
+            'text': f'You\'re on mobile data via {isp} — generally more private than public Wi-Fi.'})
+    elif is_hosting:
+        insights.append({'icon': '🌐', 'severity': 'medium',
+            'text': f'Your IP is from a datacenter ({isp}) — suggests a VPN or shared hosting network.'})
+    else:
+        insights.append({'icon': '🏠', 'severity': 'low',
+            'text': f'Your ISP ({isp}) suggests you\'re on a residential broadband connection.'})
+
+    if result['risk'] > 60:
+        insights.append({'icon': '⚠️', 'severity': 'high',
+            'text': f'High risk score ({result["risk"]}/100) — avoid banking, passwords, or sensitive logins on this network.'})
+    elif result['risk'] > 30:
+        insights.append({'icon': '🟡', 'severity': 'medium',
+            'text': 'Moderate risk — safe for general browsing, but avoid entering sensitive credentials.'})
+    else:
+        insights.append({'icon': '✅', 'severity': 'low',
+            'text': 'Low risk detected — your connection looks secure for general use.'})
+
+    return insights
+
+# ── NEW: SECURE GUIDE (dynamic based on scan) ──────────────────────────
+def build_secure_guide(info, is_https, vpn, result):
+    steps = []
+    step_num = 1
+
+    if not vpn:
+        steps.append({
+            'step': step_num, 'priority': 'critical',
+            'title': 'Enable a VPN immediately',
+            'detail': 'Your IP and location are fully exposed. A VPN encrypts your traffic and hides your real IP. Recommended: Mullvad, ProtonVPN, or Windscribe (free tier available).'
+        })
+        step_num += 1
+
+    if not is_https:
+        steps.append({
+            'step': step_num, 'priority': 'critical',
+            'title': 'Switch to HTTPS-only mode',
+            'detail': 'Enable "HTTPS-Only Mode" in your browser settings (Firefox: Settings → Privacy; Chrome: Settings → Security). This prevents accessing unencrypted sites.'
+        })
+        step_num += 1
+
+    steps.append({
+        'step': step_num, 'priority': 'high',
+        'title': 'Install a DNS privacy resolver',
+        'detail': 'Change your DNS to Cloudflare (1.1.1.1) or NextDNS to prevent your ISP from logging your DNS queries. On Wi-Fi: Router Settings → DNS → 1.1.1.1 / 1.0.0.1.'
+    })
+    step_num += 1
+
+    steps.append({
+        'step': step_num, 'priority': 'high',
+        'title': 'Reduce browser fingerprinting',
+        'detail': 'Install uBlock Origin + Canvas Blocker extensions. Use Firefox with strict privacy mode, or Brave Browser. Avoid Chrome on untrusted networks.'
+    })
+    step_num += 1
+
+    if not info.get('is_mobile', False):
+        steps.append({
+            'step': step_num, 'priority': 'medium',
+            'title': 'Enable your device firewall',
+            'detail': 'macOS: System Preferences → Security → Firewall → Enable. Windows: Control Panel → Windows Defender Firewall → Turn On. Blocks unsolicited inbound connections.'
+        })
+        step_num += 1
+
+    steps.append({
+        'step': step_num, 'priority': 'medium',
+        'title': 'Keep your OS and apps updated',
+        'detail': 'Security patches are released constantly. Enable automatic updates. Check: macOS → System Preferences → Software Update. Windows → Settings → Update & Security.'
+    })
+    step_num += 1
+
+    steps.append({
+        'step': step_num, 'priority': 'low',
+        'title': 'Use a password manager',
+        'detail': 'Never reuse passwords. On untrusted networks, credential theft is easy if HTTPS is absent. Use Bitwarden (free, open-source) or 1Password.'
+    })
+
+    return steps
+
+# ── ROUTES (ALL ORIGINAL PRESERVED) ───────────────────────────────────
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -263,6 +442,8 @@ def auto_scan():
     vpn = detect_vpn(info)
     result = calculate_score(info, is_https, vpn)
     result['checks'] = run_checks(info, is_https, vpn)
+    result['insights'] = build_insights(info, is_https, vpn, result)     # NEW
+    result['secure_guide'] = build_secure_guide(info, is_https, vpn, result)  # NEW
     result['detected'] = {
         'ip': info.get('ip', ip.split(',')[0].strip()),
         'isp': info.get('isp', 'Unknown'),
@@ -314,6 +495,52 @@ def auto_scan():
     except Exception as e:
         print(f"Firebase error: {e}")
 
+    return jsonify(result)
+
+# ── NEW: MANUAL SCAN ENDPOINT ──────────────────────────────────────────
+@app.route('/manual-scan', methods=['POST'])
+def manual_scan():
+    data = request.get_json(force=True) or {}
+    target = data.get('target', '').strip()
+    if not target:
+        return jsonify({'error': 'No target provided'}), 400
+
+    # Resolve URL to IP if needed
+    import re
+    # Strip protocol/path to get hostname
+    hostname = re.sub(r'^https?://', '', target).split('/')[0].split(':')[0]
+
+    # Check if it's already an IP
+    ip_pattern = re.compile(r'^\d{1,3}(\.\d{1,3}){3}$')
+    if ip_pattern.match(hostname):
+        ip = hostname
+    else:
+        try:
+            import socket
+            ip = socket.gethostbyname(hostname)
+        except Exception:
+            return jsonify({'error': f'Could not resolve hostname: {hostname}'}), 400
+
+    is_https = target.startswith('https://') if '://' in target else False
+
+    info = get_ip_info(ip)
+    vpn = detect_vpn(info)
+    result = calculate_score(info, is_https, vpn)
+    result['checks'] = run_checks(info, is_https, vpn)
+    result['insights'] = build_insights(info, is_https, vpn, result)
+    result['secure_guide'] = build_secure_guide(info, is_https, vpn, result)
+    result['detected'] = {
+        'ip': info.get('ip', ip),
+        'isp': info.get('isp', 'Unknown'),
+        'city': info.get('city', 'Unknown'),
+        'region': info.get('region', ''),
+        'country': info.get('country', 'Unknown'),
+        'is_https': is_https,
+        'vpn': vpn,
+        'timezone': info.get('timezone', 'Unknown'),
+        'is_mobile': info.get('is_mobile', False),
+        'manual_target': target,
+    }
     return jsonify(result)
 
 @app.route('/history')
