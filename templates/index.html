@@ -206,30 +206,88 @@ a{text-decoration:none}
 .rescan:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
 
 /* IDENTITY CARD — BIG DATA */
-.identity-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);
-  display:grid;grid-template-columns:1fr 1fr 1fr 1fr;
-  position:relative;overflow:hidden;
+/* IDENTITY PANEL */
+.identity-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r4);overflow:hidden;
 }
-.id-item{padding:28px 28px 28px 0;margin-left:28px;border-right:1px solid var(--border)}
-.id-item:first-child{margin-left:0;padding-left:28px;border-left:none}
-.id-item:last-child{border-right:none}
-.id-label{
-  font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text3);
-  letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;
+.identity-top{
+  display:grid;grid-template-columns:1.3fr 1fr 1fr;
+  border-bottom:1px solid var(--border);
 }
-.id-value{font-size:20px;font-weight:700;color:var(--text);letter-spacing:-.6px;line-height:1.2;margin-bottom:5px;font-family:var(--mono)}
-.id-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
-.id-tags{display:flex;flex-direction:column;gap:7px;margin-top:4px}
-.id-tag{
-  display:inline-flex;align-items:center;gap:5px;
-  font-size:10px;font-weight:700;font-family:var(--mono);
-  padding:4px 10px;border-radius:5px;letter-spacing:.4px;text-transform:uppercase;width:fit-content;
+.id-hero{
+  padding:28px 32px;background:var(--text);
+  display:flex;flex-direction:column;gap:10px;
+  border-right:1px solid rgba(255,255,255,0.08);
 }
-.id-tag.green{color:var(--green);background:var(--green-bg)}
-.id-tag.amber{color:var(--amber);background:var(--amber-bg)}
-.id-tag.red{color:var(--red);background:var(--red-bg)}
-.id-tag::before{content:'';width:4px;height:4px;border-radius:50%;background:currentColor;display:block}
+.id-hero-lbl{
+  font-size:9px;font-weight:600;font-family:var(--mono);
+  color:rgba(255,255,255,0.4);letter-spacing:1.5px;text-transform:uppercase;
+}
+.id-hero-ip{
+  font-size:26px;font-weight:700;font-family:var(--mono);
+  color:#fff;letter-spacing:-1px;line-height:1.15;word-break:break-all;
+}
+.id-hero-tz{font-size:11px;font-family:var(--mono);color:rgba(255,255,255,0.4)}
+.id-col{
+  padding:24px 26px;border-right:1px solid var(--border);
+  display:flex;flex-direction:column;gap:6px;
+  transition:background .15s;
+}
+.id-col:last-child{border-right:none}
+.id-col:hover{background:var(--surface2)}
+.id-col-lbl{
+  font-size:9px;font-weight:600;font-family:var(--mono);
+  color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;
+}
+.id-col-val{
+  font-size:16px;font-weight:700;color:var(--text);
+  letter-spacing:-.4px;line-height:1.3;font-family:var(--mono);
+}
+.id-col-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+
+/* Bottom status strip */
+.identity-bottom{
+  display:grid;grid-template-columns:repeat(5,1fr);
+  background:var(--surface2);
+}
+.id-status{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 18px;border-right:1px solid var(--border);
+  transition:background .15s;
+}
+.id-status:last-child{border-right:none}
+.id-status:hover{background:var(--surface3)}
+.id-status-icon{
+  width:32px;height:32px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.id-status-icon.green{background:var(--green-bg)}
+.id-status-icon.amber{background:var(--amber-bg)}
+.id-status-icon.red{background:var(--red-bg)}
+.id-status-icon.neutral{background:var(--surface3)}
+.id-status-body{}
+.id-status-key{
+  font-size:9px;font-weight:600;font-family:var(--mono);
+  color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;
+}
+.id-status-val{
+  font-size:12px;font-weight:700;font-family:var(--mono);letter-spacing:-.2px;
+}
+.id-status-val.green{color:var(--green)}
+.id-status-val.amber{color:var(--amber)}
+.id-status-val.red{color:var(--red)}
+.id-status-val.neutral{color:var(--text2)}
+
+/* keep old selectors alive for JS compat */
+.identity-card{display:none}
+.id-item{display:none}
+.id-label{display:none}
+.id-value{}
+.id-sub{}
+.id-tags{display:none}
+.id-tag{display:none}
 
 /* SCORE ROW */
 .score-row{display:grid;grid-template-columns:210px 1fr 1fr 1fr;gap:14px;align-items:stretch}
@@ -501,29 +559,76 @@ a{text-decoration:none}
         <button class="rescan" onclick="runScan()">↻ Scan again</button>
       </div>
 
-      <!-- IDENTITY — BIG -->
-      <div class="identity-card">
-        <div class="id-item">
-          <div class="id-label">IP Address</div>
-          <div class="id-value" id="id-ip">—</div>
-          <div class="id-sub" id="id-tz">—</div>
-        </div>
-        <div class="id-item">
-          <div class="id-label">Location</div>
-          <div class="id-value" id="id-loc">—</div>
-          <div class="id-sub" id="id-country">—</div>
-        </div>
-        <div class="id-item">
-          <div class="id-label">ISP / Carrier</div>
-          <div class="id-value" id="id-isp" style="font-size:15px;line-height:1.4">—</div>
-          <div class="id-sub" id="id-isp-type">—</div>
-        </div>
-        <div class="id-item">
-          <div class="id-label">Security Status</div>
-          <div class="id-tags">
-            <div class="id-tag" id="tag-https">HTTPS</div>
-            <div class="id-tag" id="tag-vpn">VPN</div>
+      <!-- IDENTITY PANEL -->
+      <div class="identity-panel">
+
+        <!-- Top row: IP (dark) + Location + ISP -->
+        <div class="identity-top">
+          <div class="id-hero">
+            <div class="id-hero-lbl">IP Address</div>
+            <div class="id-hero-ip" id="id-ip">—</div>
+            <div class="id-hero-tz" id="id-tz">—</div>
           </div>
+          <div class="id-col">
+            <div class="id-col-lbl">Location</div>
+            <div class="id-col-val" id="id-loc">—</div>
+            <div class="id-col-sub" id="id-country">—</div>
+          </div>
+          <div class="id-col">
+            <div class="id-col-lbl">ISP / Carrier</div>
+            <div class="id-col-val" id="id-isp" style="font-size:14px">—</div>
+            <div class="id-col-sub" id="id-isp-type">—</div>
+          </div>
+        </div>
+
+        <!-- Bottom: 5 status badges -->
+        <div class="identity-bottom">
+
+          <!-- HTTPS -->
+          <div class="id-status">
+            <div class="id-status-icon neutral" id="si-https">🔒</div>
+            <div class="id-status-body">
+              <div class="id-status-key">HTTPS</div>
+              <div class="id-status-val neutral" id="tag-https">—</div>
+            </div>
+          </div>
+
+          <!-- VPN — separate card -->
+          <div class="id-status">
+            <div class="id-status-icon neutral" id="si-vpn">🛡</div>
+            <div class="id-status-body">
+              <div class="id-status-key">VPN</div>
+              <div class="id-status-val neutral" id="tag-vpn">—</div>
+            </div>
+          </div>
+
+          <!-- Device type: Phone or Laptop -->
+          <div class="id-status">
+            <div class="id-status-icon neutral" id="si-device">💻</div>
+            <div class="id-status-body">
+              <div class="id-status-key">Device type</div>
+              <div class="id-status-val neutral" id="tag-device">—</div>
+            </div>
+          </div>
+
+          <!-- DNS -->
+          <div class="id-status">
+            <div class="id-status-icon neutral" id="si-dns">🔍</div>
+            <div class="id-status-body">
+              <div class="id-status-key">DNS Privacy</div>
+              <div class="id-status-val neutral" id="tag-dns">—</div>
+            </div>
+          </div>
+
+          <!-- Region -->
+          <div class="id-status">
+            <div class="id-status-icon neutral" id="si-region">🌍</div>
+            <div class="id-status-body">
+              <div class="id-status-key">Region</div>
+              <div class="id-status-val neutral" id="tag-region">—</div>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -701,23 +806,53 @@ function render(r) {
     'Scanned ' + new Date().toLocaleTimeString() +
     (d.manual_target ? '  ·  ' + d.manual_target : '');
 
-  /* Identity — BIG */
+  /* Identity panel */
   document.getElementById('id-ip').textContent = d.ip || '—';
   document.getElementById('id-tz').textContent = d.timezone || '—';
   document.getElementById('id-loc').textContent = d.city + (d.region ? ', ' + d.region : '');
   document.getElementById('id-country').textContent = d.country || '—';
-
-  var ispEl = document.getElementById('id-isp');
-  ispEl.textContent = d.isp || 'Unknown';
+  document.getElementById('id-isp').textContent = d.isp || 'Unknown';
   document.getElementById('id-isp-type').textContent = d.is_mobile ? 'Mobile carrier' : 'Broadband / Fiber';
 
-  var th = document.getElementById('tag-https');
-  th.textContent = d.is_https ? '✓ HTTPS' : '✗ No HTTPS';
-  th.className = 'id-tag ' + (d.is_https ? 'green' : 'red');
+  function setStatus(iconId, valId, icon, label, cls) {
+    var ic = document.getElementById(iconId);
+    var vl = document.getElementById(valId);
+    if (ic) { ic.className = 'id-status-icon ' + cls; ic.textContent = icon; }
+    if (vl) { vl.className = 'id-status-val ' + cls; vl.textContent = label; }
+  }
 
-  var tv = document.getElementById('tag-vpn');
-  tv.textContent = d.vpn ? '✓ VPN Active' : '✗ No VPN';
-  tv.className = 'id-tag ' + (d.vpn ? 'green' : 'amber');
+  /* HTTPS */
+  setStatus('si-https', 'tag-https',
+    d.is_https ? '🔒' : '🔓',
+    d.is_https ? 'Encrypted' : 'Unencrypted',
+    d.is_https ? 'green' : 'red');
+
+  /* VPN — separate */
+  setStatus('si-vpn', 'tag-vpn',
+    d.vpn ? '🛡' : '⚠',
+    d.vpn ? 'Active' : 'Not detected',
+    d.vpn ? 'green' : 'amber');
+
+  /* Device type: phone or laptop */
+  var isMobile = d.is_mobile;
+  setStatus('si-device', 'tag-device',
+    isMobile ? '📱' : '💻',
+    isMobile ? 'Phone / Mobile' : 'Laptop / Desktop',
+    isMobile ? 'amber' : 'neutral');
+
+  /* DNS */
+  setStatus('si-dns', 'tag-dns',
+    d.vpn ? '🔐' : '🔍',
+    d.vpn ? 'Protected' : 'Exposed',
+    d.vpn ? 'green' : 'amber');
+
+  /* Region */
+  var highRisk = ['China','Russia','Iran','North Korea','Belarus','Syria'];
+  var riskRegion = highRisk.indexOf(d.country || '') !== -1;
+  setStatus('si-region', 'tag-region',
+    riskRegion ? '🚨' : '🌍',
+    riskRegion ? 'High risk' : 'Standard',
+    riskRegion ? 'red' : 'green');
 
   /* Ring */
   var circ = 2 * Math.PI * 60;
