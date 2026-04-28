@@ -5,764 +5,686 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SafeHop — Wi-Fi Security Scanner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#f5f4f0;
+  --bg:#f8f8f6;
   --surface:#ffffff;
-  --surface2:#f0efe9;
-  --surface3:#e8e6df;
-  --border:#e0ddd5;
-  --border2:#cbc8be;
-  --text:#141210;
-  --text2:#706d65;
-  --text3:#b0ada5;
-  --green:#15803d;--green-bg:#f0fdf4;--green-ring:rgba(21,128,61,.2);
-  --amber:#92400e;--amber-bg:#fffbeb;
-  --red:#b91c1c;--red-bg:#fff1f2;
-  --blue:#1e40af;--blue-bg:#eff6ff;
-  --sans:'Syne',sans-serif;
-  --mono:'JetBrains Mono',monospace;
-  --r:6px;--r2:10px;--r3:14px;--r4:18px;
-  --ease:cubic-bezier(.22,1,.36,1);
+  --surface2:#f3f3f0;
+  --surface3:#eceae6;
+  --border:#e5e3de;
+  --border2:#d6d3cd;
+  --text:#1a1916;
+  --text2:#6b6860;
+  --text3:#a09d98;
+  --green:#16a34a;--green-light:#dcfce7;--green-mid:rgba(22,163,74,0.12);
+  --amber:#b45309;--amber-light:#fef3c7;--amber-mid:rgba(180,83,9,0.10);
+  --red:#dc2626;--red-light:#fee2e2;--red-mid:rgba(220,38,38,0.10);
+  --blue:#1d4ed8;--blue-light:#dbeafe;
+  --accent:#1a1916;
+  --sans:'DM Sans',sans-serif;
+  --mono:'DM Mono',monospace;
+  --r:8px;--r2:12px;--r3:16px;--r4:20px;
+  --sh:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
+  --sh2:0 2px 8px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.06);
 }
 html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
-button{cursor:pointer}
-a{text-decoration:none}
 
-/* TOPBAR */
+/* ── TOPBAR ── */
 .topbar{
-  position:sticky;top:0;z-index:200;height:54px;
-  background:rgba(245,244,240,.96);border-bottom:1px solid var(--border);
-  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
-  display:flex;align-items:center;justify-content:space-between;padding:0 28px;
-  will-change:transform;
+  position:sticky;top:0;z-index:100;
+  height:52px;background:rgba(248,248,246,0.92);
+  border-bottom:1px solid var(--border);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 28px;
 }
-.logo{display:flex;align-items:center;gap:10px}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .logo-mark{
-  width:32px;height:32px;border-radius:7px;background:var(--text);
+  width:30px;height:30px;border-radius:8px;
+  background:var(--accent);
   display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:700;color:#fff;font-family:var(--mono);
+  font-size:12px;font-weight:600;color:#fff;font-family:var(--mono);letter-spacing:-0.5px;
 }
-.logo-name{font-size:16px;font-weight:700;letter-spacing:-.6px}
-.logo-name em{font-style:normal;opacity:.4;font-weight:500}
-.topbar-right{display:flex;align-items:center;gap:16px}
-.live-pill{
-  display:flex;align-items:center;gap:7px;
-  background:var(--green-bg);border:1px solid var(--green-ring);
-  border-radius:20px;padding:4px 12px 4px 9px;
+.logo-name{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.4px}
+.logo-name em{font-style:normal;color:var(--text2);font-weight:400}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.live-indicator{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:breathe 2.5s ease-in-out infinite}
+@keyframes breathe{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(22,163,74,0.4)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(22,163,74,0)}}
+.topbar-badge{
+  font-size:11px;font-family:var(--mono);color:var(--text3);
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:20px;padding:3px 10px;letter-spacing:0.3px;
 }
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);
-  animation:pulse 2s ease-in-out infinite;will-change:box-shadow}
-@keyframes pulse{
-  0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(21,128,61,.5)}
-  50%{opacity:.75;box-shadow:0 0 0 5px rgba(21,128,61,0)}
-}
-.live-text{font-size:11px;font-weight:600;color:var(--green);letter-spacing:.3px}
-.topbar-v{font-size:11px;font-family:var(--mono);color:var(--text3)}
 
-/* LAYOUT */
-.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 54px);max-width:1400px;margin:0 auto}
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 52px);max-width:1280px;margin:0 auto}
 
-/* SIDEBAR */
+/* ── SIDEBAR ── */
 .sidebar{
-  background:var(--surface);border-right:1px solid var(--border);
-  padding:24px 20px 40px;position:sticky;top:54px;
-  height:calc(100vh - 54px);overflow-y:auto;
-  display:flex;flex-direction:column;gap:28px;
-  scrollbar-width:none;
+  border-right:1px solid var(--border);
+  padding:28px 20px;
+  background:var(--surface);
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
+  display:flex;flex-direction:column;gap:24px;
 }
-.sidebar::-webkit-scrollbar{display:none}
-.sb-label{
-  font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text3);
-  letter-spacing:1.2px;text-transform:uppercase;margin-bottom:12px;
-  display:flex;align-items:center;gap:10px;
+.sidebar-section{}
+.sidebar-label{
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+  letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
 }
-.sb-label::after{content:'';flex:1;height:1px;background:var(--border)}
+.sidebar-label::after{content:'';flex:1;height:1px;background:var(--border)}
 
-/* Scan block */
-.scan-block{
-  background:var(--text);border-radius:var(--r3);padding:22px;color:#fff;
-  position:relative;overflow:hidden;
+/* Scan CTA in sidebar */
+.scan-cta{
+  background:var(--accent);border-radius:var(--r2);
+  padding:20px;color:#fff;
 }
-.scan-block::before{
-  content:'';position:absolute;top:-50px;right:-50px;
-  width:140px;height:140px;border-radius:50%;
-  background:rgba(255,255,255,.04);pointer-events:none;
-}
-.scan-block-title{font-size:17px;font-weight:700;letter-spacing:-.5px;margin-bottom:6px}
-.scan-block-sub{font-size:12px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:20px}
+.scan-cta-title{font-size:16px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px}
+.scan-cta-sub{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.55;margin-bottom:16px}
 .scan-btn{
-  display:flex;align-items:center;justify-content:center;gap:9px;
-  width:100%;padding:12px;background:#fff;border:none;border-radius:var(--r2);
-  color:var(--text);font-family:var(--sans);font-size:13px;font-weight:700;
-  transition:transform .15s var(--ease),background .15s;letter-spacing:-.3px;
-  will-change:transform;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:11px 18px;
+  background:#fff;border:none;border-radius:var(--r);
+  color:var(--accent);font-family:var(--sans);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s ease;letter-spacing:-0.2px;
 }
-.scan-btn:hover{background:#f0f0ee;transform:translateY(-2px)}
-.scan-btn:active{transform:scale(.97)}
-.scan-btn.scanning{background:rgba(255,255,255,.12);color:rgba(255,255,255,.5);pointer-events:none}
-.btn-icon{transition:transform .4s;display:inline-block}
-.scanning .btn-icon{animation:spin .9s linear infinite}
+.scan-btn:hover{background:rgba(255,255,255,0.9);transform:translateY(-1px)}
+.scan-btn:active{transform:translateY(0)}
+.scan-btn.scanning{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);cursor:not-allowed}
+.scan-btn .btn-icon{font-size:14px;transition:transform .3s}
+.scan-btn.scanning .btn-icon{animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Manual */
-.manual-wrap{display:flex;flex-direction:column;gap:8px}
+/* Manual check */
+.manual-form{display:flex;flex-direction:column;gap:8px}
 .manual-input{
-  width:100%;padding:10px 13px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:var(--r2);
-  font-family:var(--mono);font-size:12px;color:var(--text);outline:none;
-  transition:border-color .2s,background .2s;
+  width:100%;padding:9px 12px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--r);
+  font-family:var(--mono);font-size:12px;color:var(--text);
+  transition:border-color .15s;outline:none;
 }
-.manual-input:focus{border-color:var(--text);background:var(--surface)}
+.manual-input:focus{border-color:var(--accent);background:var(--surface)}
 .manual-input::placeholder{color:var(--text3)}
-.manual-go{
-  width:100%;padding:9px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--r2);font-family:var(--sans);font-size:12px;font-weight:600;
-  color:var(--text2);transition:all .15s;
+.manual-btn{
+  width:100%;padding:9px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:var(--r);
+  font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text2);
+  cursor:pointer;transition:all .15s;
 }
-.manual-go:hover{background:var(--surface3);border-color:var(--border2);color:var(--text)}
-
-/* Sidebar actions */
-.sb-actions{display:flex;flex-direction:column;gap:8px}
-.sb-btn{
-  display:flex;align-items:center;gap:9px;width:100%;padding:10px 14px;
-  background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);
-  font-family:var(--sans);font-size:12px;font-weight:600;color:var(--text2);
-  transition:all .15s;text-align:left;
-}
-.sb-btn:hover{background:var(--surface3);border-color:var(--border2);color:var(--text)}
-.sb-btn.accent{background:var(--text);border-color:var(--text);color:#fff}
-.sb-btn.accent:hover{background:#2a2826}
+.manual-btn:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
 
 /* Sidebar stats */
-.sb-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sbstat{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:14px 12px;text-align:center}
-.sbstat-val{font-size:22px;font-weight:700;font-family:var(--mono);line-height:1;letter-spacing:-.5px}
-.sbstat-key{font-size:9px;font-family:var(--mono);color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-top:4px}
-
-/* History */
-.hist-row{
-  display:flex;align-items:center;gap:10px;
-  padding:9px 0;border-bottom:1px solid var(--border);
-  animation:fadeSlide .3s var(--ease) both;
+.sidebar-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sstat{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);padding:12px;text-align:center;
 }
-.hist-row:last-child{border-bottom:none}
-@keyframes fadeSlide{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
-.hist-ip{font-family:var(--mono);font-size:11px;color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.hist-badge{font-size:9px;font-family:var(--mono);font-weight:600;padding:2px 8px;border-radius:4px;flex-shrink:0;letter-spacing:.6px;text-transform:uppercase}
-.hist-badge.safe{color:var(--green);background:var(--green-bg)}
-.hist-badge.warn{color:var(--amber);background:var(--amber-bg)}
-.hist-badge.danger{color:var(--red);background:var(--red-bg)}
-.hist-score{font-family:var(--mono);font-size:12px;font-weight:500;flex-shrink:0}
+.sstat-val{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text);line-height:1}
+.sstat-key{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.5px;text-transform:uppercase;margin-top:3px}
 
-/* MAIN */
-.main{padding:32px 36px 80px;display:flex;flex-direction:column;gap:22px}
+/* Sidebar history */
+.side-history-row{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+  font-size:11px;
+}
+.side-history-row:last-child{border-bottom:none}
+.sh-ip{font-family:var(--mono);color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sh-badge{
+  font-size:9px;font-family:var(--mono);font-weight:500;
+  padding:2px 7px;border-radius:4px;flex-shrink:0;
+  letter-spacing:0.5px;text-transform:uppercase;
+}
+.sh-badge.safe{color:var(--green);background:var(--green-light)}
+.sh-badge.warn{color:var(--amber);background:var(--amber-light)}
+.sh-badge.danger{color:var(--red);background:var(--red-light)}
+.sh-score{font-family:var(--mono);font-weight:500;color:var(--text3);flex-shrink:0}
 
-/* HERO */
-.hero{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);
-  padding:44px 40px 38px;position:relative;overflow:hidden;
+/* Share in sidebar */
+.share-row{display:flex;flex-direction:column;gap:8px}
+.share-btn-s{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:9px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--r);font-family:var(--sans);font-size:12px;
+  font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;
 }
-.hero-bg{
-  position:absolute;right:-20px;bottom:-28px;
-  font-size:130px;font-weight:800;color:rgba(0,0,0,.03);
-  line-height:1;letter-spacing:-6px;pointer-events:none;user-select:none;
+.share-btn-s:hover{background:var(--surface3);border-color:var(--border2);color:var(--text)}
+.share-btn-s.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.share-btn-s.primary:hover{background:#333}
+
+/* ── MAIN CONTENT ── */
+.main{padding:32px 32px 80px;display:flex;flex-direction:column;gap:20px}
+
+/* ── HERO (inside main, pre-scan) ── */
+.hero-bar{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:28px 32px;
+  box-shadow:var(--sh);
 }
-.hero-tag{
+.hero-eyebrow{
   display:inline-flex;align-items:center;gap:7px;
-  font-size:11px;font-weight:600;font-family:var(--mono);color:var(--green);
-  background:var(--green-bg);border:1px solid rgba(21,128,61,.25);
-  border-radius:20px;padding:4px 12px;margin-bottom:18px;letter-spacing:.3px;
+  font-size:11px;font-family:var(--mono);color:var(--green);
+  border:1px solid rgba(22,163,74,0.3);background:var(--green-mid);
+  border-radius:20px;padding:3px 11px;margin-bottom:14px;letter-spacing:0.3px;
 }
-.hero-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);display:block}
-.hero h1{font-size:38px;font-weight:800;letter-spacing:-1.8px;line-height:1.12;margin-bottom:12px}
-.hero h1 span{color:var(--text3)}
-.hero-desc{font-size:14px;color:var(--text2);line-height:1.7;max-width:500px}
+.hero-eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);display:block}
+.hero h1{font-size:30px;font-weight:600;line-height:1.2;letter-spacing:-1px;color:var(--text);margin-bottom:8px}
+.hero h1 em{font-style:italic;color:var(--text2)}
+.hero-sub{font-size:14px;color:var(--text2);line-height:1.65;max-width:520px}
 
-/* SKELETON */
-.skeleton{display:none;flex-direction:column;gap:20px}
-.skeleton.show{display:flex}
-.sk-row{display:grid;gap:16px}
-.sk-row.r4{grid-template-columns:1fr 1fr 1fr 1fr}
-.sk-row.r2{grid-template-columns:1fr 1fr}
-.sk{border-radius:var(--r3);background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:200% 100%;animation:shim 1.4s ease-in-out infinite}
-@keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.sk.h90{height:90px}.sk.h140{height:140px}.sk.h70{height:70px}
+/* ── SKELETON ── */
+.skeleton-wrap{display:none}
+.skeleton-wrap.show{display:flex;flex-direction:column;gap:16px}
+.skeleton-row{display:grid;gap:12px}
+.skeleton-row.cols3{grid-template-columns:1fr 1fr 1fr}
+.skeleton-row.cols2{grid-template-columns:1fr 1fr}
+.skel{
+  background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.5s infinite;border-radius:var(--r2);
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.skel-card{height:100px}
+.skel-wide{height:140px}
+.skel-tall{height:200px}
+.skel-check{height:64px}
 
-/* RESULTS */
-.results{display:none;flex-direction:column;gap:20px}
-.results.show{display:flex}
+/* ── RESULTS ── */
+.results{display:none}
+.results.show{display:flex;flex-direction:column;gap:20px}
 
-/* SCAN META */
-.scan-meta{display:flex;align-items:center;justify-content:space-between}
-.scan-time-txt{font-size:11px;color:var(--text3);font-family:var(--mono)}
-.rescan{
-  display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
-  color:var(--text2);background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r);padding:7px 14px;transition:all .15s;
+/* ── PILLS ── */
+.pills-row{display:flex;flex-wrap:wrap;gap:7px}
+.pill{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-family:var(--mono);
+  color:var(--text2);background:var(--surface);
+  border:1px solid var(--border);border-radius:6px;padding:5px 11px;
+  box-shadow:var(--sh);
 }
-.rescan:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+.pill-key{color:var(--text3);font-size:10px;margin-right:2px;text-transform:uppercase;letter-spacing:0.5px}
+.pill.good{border-color:rgba(22,163,74,0.4);color:var(--green);background:var(--green-light)}
+.pill.warn{border-color:rgba(180,83,9,0.3);color:var(--amber);background:var(--amber-light)}
+.pill.bad{border-color:rgba(220,38,38,0.3);color:var(--red);background:var(--red-light)}
 
-/* ── IDENTITY PANEL — HERO DATA BLOCK ─────────────────── */
-.identity-panel{
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--r4);
-  overflow:hidden;
-  box-shadow:0 2px 16px rgba(0,0,0,.045);
-}
-.identity-top{
-  display:grid;
-  grid-template-columns:1.4fr 1fr 1fr;
-  border-bottom:1px solid var(--border);
-}
-.id-hero{
-  padding:32px 36px;
-  border-right:1px solid var(--border);
-  background:var(--text);
-  display:flex;flex-direction:column;justify-content:space-between;
-  gap:14px;
-}
-.id-hero-label{
-  font-size:9px;font-weight:600;font-family:var(--mono);
-  color:rgba(255,255,255,.4);letter-spacing:1.5px;text-transform:uppercase;
-}
-.id-hero-ip{
-  font-size:32px;font-weight:700;font-family:var(--mono);
-  color:#fff;letter-spacing:-1.5px;line-height:1.1;
-  word-break:break-all;
-}
-.id-hero-tz{
-  font-size:12px;font-family:var(--mono);
-  color:rgba(255,255,255,.45);margin-top:2px;
-}
-.id-col{
-  padding:26px 28px;
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;justify-content:space-between;
-  gap:8px;
-  transition:background .15s;
-}
-.id-col:last-child{border-right:none}
-.id-col:hover{background:var(--surface2)}
-.id-col-label{
-  font-size:9px;font-weight:600;font-family:var(--mono);
-  color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;
-}
-.id-col-value{
-  font-size:18px;font-weight:700;color:var(--text);
-  letter-spacing:-.5px;line-height:1.25;font-family:var(--mono);
-}
-.id-col-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+/* ── SCORE + METRICS ROW ── */
+.score-metrics-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:16px;align-items:start}
 
-/* Badge row at bottom of panel */
-.identity-bottom{
-  display:flex;align-items:center;gap:0;
-  background:var(--surface2);
-  border-top:1px solid var(--border);
-  padding:0;overflow:hidden;
+/* Score ring card */
+.score-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:24px;
+  display:flex;flex-direction:column;align-items:center;gap:16px;
+  box-shadow:var(--sh);text-align:center;
 }
-.id-badge-slot{
-  flex:1;display:flex;align-items:center;gap:10px;
-  padding:16px 24px;
-  border-right:1px solid var(--border);
-  transition:background .15s;
-  cursor:default;
+.ring-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
+.ring-wrap svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--surface3);stroke-width:9}
+.ring-fill{
+  fill:none;stroke-width:9;stroke-linecap:round;
+  stroke-dasharray:345;stroke-dashoffset:345;
+  transition:stroke-dashoffset 1.3s cubic-bezier(.22,1,.36,1),stroke .4s;
 }
-.id-badge-slot:last-child{border-right:none}
-.id-badge-slot:hover{background:var(--surface3)}
-.id-badge-icon{
-  width:34px;height:34px;border-radius:8px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;font-size:16px;
+.ring-center{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
 }
-.id-badge-icon.green{background:var(--green-bg)}
-.id-badge-icon.amber{background:var(--amber-bg)}
-.id-badge-icon.red{background:var(--red-bg)}
-.id-badge-icon.neutral{background:var(--surface3)}
-.id-badge-body{}
-.id-badge-name{
-  font-size:9px;font-weight:600;font-family:var(--mono);
-  color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:3px;
+.ring-number{font-size:38px;font-weight:600;font-family:var(--mono);line-height:1;letter-spacing:-2px}
+.score-badge{
+  display:inline-flex;align-items:center;gap:7px;
+  font-size:13px;font-weight:600;padding:6px 14px;
+  border-radius:20px;border:1px solid;letter-spacing:0.2px;
 }
-.id-badge-val{
-  font-size:13px;font-weight:700;font-family:var(--mono);
-  letter-spacing:-.2px;
-}
-.id-badge-val.green{color:var(--green)}
-.id-badge-val.amber{color:var(--amber)}
-.id-badge-val.red{color:var(--red)}
-.id-badge-val.neutral{color:var(--text2)}
-
-/* Keep old id-tag for JS compat but hide it */
-.id-tags{display:none}
-.id-tag{display:none}
-/* Alias old ids */
-.identity-card{display:none}
-
-/* SCORE ROW */
-.score-row{display:grid;grid-template-columns:210px 1fr 1fr 1fr;gap:14px;align-items:stretch}
-
-/* Ring card */
-.ring-card{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);
-  padding:26px 22px;display:flex;flex-direction:column;align-items:center;gap:14px;
-}
-.ring-outer{position:relative;width:140px;height:140px}
-.ring-outer svg{transform:rotate(-90deg);will-change:stroke-dashoffset}
-.ring-bg-circle{fill:none;stroke:var(--surface3);stroke-width:10}
-.ring-main{fill:none;stroke-width:10;stroke-linecap:round;stroke-dasharray:377;stroke-dashoffset:377;transition:stroke-dashoffset 1.5s var(--ease),stroke .4s;will-change:stroke-dashoffset}
-.ring-center{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.ring-num{font-size:46px;font-weight:800;font-family:var(--mono);line-height:1;letter-spacing:-3px}
-.risk-badge{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;border:1.5px solid;letter-spacing:.2px;
-}
-.risk-badge.safe{color:var(--green);border-color:rgba(21,128,61,.3);background:var(--green-bg)}
-.risk-badge.warn{color:var(--amber);border-color:rgba(146,64,14,.25);background:var(--amber-bg)}
-.risk-badge.danger{color:var(--red);border-color:rgba(185,28,28,.25);background:var(--red-bg)}
-.risk-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
+.score-badge.safe{color:var(--green);border-color:rgba(22,163,74,0.35);background:var(--green-light)}
+.score-badge.warn{color:var(--amber);border-color:rgba(180,83,9,0.3);background:var(--amber-light)}
+.score-badge.danger{color:var(--red);border-color:rgba(220,38,38,0.3);background:var(--red-light)}
+.score-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
 
 /* Metric cards */
-.metric{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);
-  padding:24px 22px;display:flex;flex-direction:column;justify-content:space-between;
-  position:relative;overflow:hidden;
-  transition:transform .2s var(--ease);
+.metric-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:20px;
+  box-shadow:var(--sh);position:relative;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:space-between;
+  min-height:100px;
 }
-.metric:hover{transform:translateY(-3px)}
-.metric-bar{position:absolute;top:0;left:0;right:0;height:3px}
-.metric-bar.safe{background:var(--green)}
-.metric-bar.warn{background:var(--amber)}
-.metric-bar.danger{background:var(--red)}
-.metric-label{font-size:10px;font-weight:600;font-family:var(--mono);color:var(--text3);letter-spacing:.9px;text-transform:uppercase}
-.metric-val{font-size:44px;font-weight:800;font-family:var(--mono);line-height:1;letter-spacing:-2px;margin-top:10px}
-.metric-foot{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:8px}
+.metric-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
+.metric-accent.safe{background:var(--green)}
+.metric-accent.warn{background:var(--amber)}
+.metric-accent.danger{background:var(--red)}
+.metric-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.7px;text-transform:uppercase;margin-bottom:8px}
+.metric-value{font-size:30px;font-weight:600;font-family:var(--mono);line-height:1;letter-spacing:-1px}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
 
-/* SPEED */
-.speed-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);padding:28px 32px}
-.speed-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.speed-title{font-size:13px;font-weight:700;letter-spacing:-.3px}
-.speed-tag{font-size:10px;font-family:var(--mono);color:var(--text3)}
-.speed-gauges{display:flex;gap:40px;align-items:flex-end;flex-wrap:wrap}
-.g-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
-.g-num{font-size:34px;font-weight:800;font-family:var(--mono);letter-spacing:-1.5px;line-height:1}
-.g-unit{font-size:11px;font-family:var(--mono);color:var(--text3);text-transform:uppercase;letter-spacing:.8px}
-.g-dir{font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.8px;text-transform:uppercase}
-.sp-div{width:1px;height:80px;background:var(--border);align-self:center}
+/* ── TWO COLUMN MID ── */
+.mid-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 
-/* INSIGHTS */
-.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.ins-tile{
-  border:1px solid var(--border);border-radius:var(--r3);padding:18px 20px;
-  display:flex;align-items:flex-start;gap:14px;background:var(--surface);
-  transition:border-color .2s,transform .2s var(--ease);
-  animation:tileIn .4s var(--ease) both;
+/* ── CARD BASE ── */
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:22px;box-shadow:var(--sh);
 }
-.ins-tile:hover{border-color:var(--border2);transform:translateY(-2px)}
-@keyframes tileIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.ins-icon{width:36px;height:36px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px}
-.ins-icon.low{background:var(--green-bg)}
-.ins-icon.medium{background:var(--amber-bg)}
-.ins-icon.high{background:var(--red-bg)}
-.ins-head{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-.3px;margin-bottom:4px}
-.ins-desc{font-size:12px;color:var(--text2);line-height:1.6}
-
-/* MID GRID */
-.mid-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-
-/* CARD */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);padding:24px}
-.card-title{
-  font-size:13px;font-weight:700;letter-spacing:-.3px;
-  margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);
+.card-head{
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+  letter-spacing:0.8px;text-transform:uppercase;margin-bottom:16px;
   display:flex;align-items:center;justify-content:space-between;
+  padding-bottom:12px;border-bottom:1px solid var(--border);
 }
-.card-title-right{font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:400}
+.card-head-title{display:flex;align-items:center;gap:8px}
 
-/* BREAKDOWN */
-.bar-item{margin-bottom:14px}
+/* ── BREAKDOWN BARS ── */
+.bar-item{margin-bottom:13px}
 .bar-item:last-child{margin-bottom:0}
-.bar-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
+.bar-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .bar-name{font-size:12px;color:var(--text2);font-weight:500}
-.bar-pts{font-size:12px;font-family:var(--mono);font-weight:600}
+.bar-pts{font-size:11px;font-family:var(--mono);font-weight:500}
 .bar-track{height:4px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.bar-fill{height:4px;border-radius:3px;width:0;transition:width 1.4s var(--ease)}
+.bar-fill{height:4px;border-radius:3px;width:0;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
 
-/* RECS */
-.rec-item{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);animation:fadeIn .3s var(--ease) both}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+/* ── RECOMMENDATIONS ── */
+.rec-item{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:9px 0;border-bottom:1px solid var(--border);
+  font-size:12px;color:var(--text2);line-height:1.6;
+}
 .rec-item:last-child{border-bottom:none;padding-bottom:0}
-.rec-icon{width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.rec-icon.bad{background:var(--red-bg);color:var(--red)}
-.rec-icon.good{background:var(--green-bg);color:var(--green)}
-.rec-text{font-size:12px;color:var(--text2);line-height:1.6}
+.rec-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.rec-dot.bad{background:var(--red)}
+.rec-dot.good{background:var(--green)}
 
-/* CHECKS */
+/* ── CHECKS GRID ── */
 .checks-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.check{
-  display:flex;align-items:center;gap:11px;
-  padding:13px 14px;background:var(--bg);
+.check-item{
+  display:flex;align-items:center;gap:10px;
+  padding:11px 13px;background:var(--bg);
   border:1px solid var(--border);border-radius:var(--r2);
-  transition:border-color .15s,transform .2s var(--ease);
-  animation:checkIn .3s var(--ease) both;
+  transition:border-color .15s,box-shadow .15s;cursor:default;
 }
-.check:hover{border-color:var(--border2);transform:translateX(3px)}
-@keyframes checkIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-.chk-icon{width:32px;height:32px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-.chk-icon.pass{background:var(--green-bg)}
-.chk-icon.warn{background:var(--amber-bg)}
-.chk-icon.fail{background:var(--red-bg)}
-.chk-body{flex:1;min-width:0}
-.chk-name{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.1px}
-.chk-detail{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.chk-pill{margin-left:auto;font-size:9px;font-family:var(--mono);font-weight:700;padding:3px 8px;border-radius:4px;flex-shrink:0;letter-spacing:.6px;text-transform:uppercase}
-.chk-pill.pass{color:var(--green);background:var(--green-bg)}
-.chk-pill.warn{color:var(--amber);background:var(--amber-bg)}
-.chk-pill.fail{color:var(--red);background:var(--red-bg)}
+.check-item:hover{border-color:var(--border2);box-shadow:var(--sh)}
+.check-icon-wrap{
+  width:30px;height:30px;border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;flex-shrink:0;
+}
+.check-icon-wrap.pass{background:var(--green-light)}
+.check-icon-wrap.warn{background:var(--amber-light)}
+.check-icon-wrap.fail{background:var(--red-light)}
+.check-info{flex:1;min-width:0}
+.check-name{font-size:11px;font-weight:600;color:var(--text);letter-spacing:0.1px}
+.check-detail{font-size:10px;color:var(--text3);margin-top:1px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.check-badge{
+  margin-left:auto;font-size:9px;font-family:var(--mono);font-weight:500;
+  letter-spacing:0.5px;text-transform:uppercase;
+  padding:3px 7px;border-radius:4px;flex-shrink:0;
+}
+.check-badge.pass{color:var(--green);background:var(--green-light)}
+.check-badge.warn{color:var(--amber);background:var(--amber-light)}
+.check-badge.fail{color:var(--red);background:var(--red-light)}
 
-/* MODAL */
-.overlay{position:fixed;inset:0;z-index:500;background:rgba(20,18,16,.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;padding:20px}
-.overlay.show{display:flex}
+/* ── SPEED METER ── */
+.speed-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r3);padding:22px;box-shadow:var(--sh);
+}
+.speed-gauges{display:flex;gap:20px;justify-content:center;align-items:center;flex-wrap:wrap}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
+.gauge-svg-wrap{position:relative;width:120px;height:70px;overflow:hidden}
+.gauge-label{font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;letter-spacing:0.5px;text-transform:uppercase}
+.gauge-val{font-size:18px;font-weight:600;font-family:var(--mono);color:var(--text);text-align:center;letter-spacing:-0.5px;line-height:1}
+.gauge-unit{font-size:10px;color:var(--text3);font-family:var(--mono)}
+.speed-divider{width:1px;height:60px;background:var(--border)}
+
+/* ── INSIGHTS PANEL ── */
+.insight-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:11px 0;border-bottom:1px solid var(--border);
+}
+.insight-item:last-child{border-bottom:none;padding-bottom:0}
+.insight-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;flex-shrink:0;
+}
+.insight-icon.low{background:var(--green-light)}
+.insight-icon.medium{background:var(--amber-light)}
+.insight-icon.high{background:var(--red-light)}
+.insight-text{font-size:12px;color:var(--text2);line-height:1.65;margin-top:6px}
+
+/* ── SECURE GUIDE MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:500;
+  background:rgba(26,25,22,0.5);backdrop-filter:blur(4px);
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.modal-overlay.show{display:flex}
 .modal{
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--r4);
-  max-width:640px;width:100%;max-height:88vh;overflow:hidden;
-  display:flex;flex-direction:column;
-  box-shadow:0 24px 60px rgba(0,0,0,.18);
-  animation:modalIn .3s var(--ease);will-change:transform,opacity;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r4);max-width:620px;width:100%;max-height:85vh;
+  overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh2);
+  animation:modalIn .25s cubic-bezier(.22,1,.36,1);
 }
-@keyframes modalIn{from{opacity:0;transform:scale(.94) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-head{padding:24px 28px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
-.modal-title{font-size:18px;font-weight:800;letter-spacing:-.6px}
-.modal-sub{font-size:12px;color:var(--text2);margin-top:4px}
-.modal-x{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:6px 11px;font-size:14px;color:var(--text2);transition:all .15s;line-height:1}
-.modal-x:hover{background:var(--surface3);color:var(--text)}
-.modal-body{padding:24px 28px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin}
-.step-card{display:flex;gap:16px;padding:16px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r3);transition:border-color .15s}
-.step-card:hover{border-color:var(--border2)}
-.step-num{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-family:var(--mono);font-weight:700}
-.step-num.critical{background:var(--red-bg);color:var(--red)}
-.step-num.high{background:var(--amber-bg);color:var(--amber)}
-.step-num.medium{background:var(--blue-bg);color:var(--blue)}
-.step-num.low{background:var(--green-bg);color:var(--green)}
-.step-title{font-size:13px;font-weight:700;margin-bottom:5px;letter-spacing:-.2px}
-.step-detail{font-size:11px;color:var(--text2);line-height:1.7}
+@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{
+  padding:22px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-start;justify-content:space-between;
+}
+.modal-title{font-size:17px;font-weight:600;letter-spacing:-0.4px}
+.modal-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.modal-close{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:6px;padding:6px 10px;cursor:pointer;
+  font-size:13px;color:var(--text2);transition:all .15s;line-height:1;
+}
+.modal-close:hover{background:var(--surface3);color:var(--text)}
+.modal-body{padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.guide-step{
+  display:flex;gap:14px;padding:14px;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);
+  transition:border-color .15s;
+}
+.guide-step:hover{border-color:var(--border2)}
+.guide-step-num{
+  width:28px;height:28px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-family:var(--mono);font-weight:500;
+}
+.guide-step-num.critical{background:var(--red-light);color:var(--red)}
+.guide-step-num.high{background:var(--amber-light);color:var(--amber)}
+.guide-step-num.medium{background:var(--blue-light);color:var(--blue)}
+.guide-step-num.low{background:var(--green-light);color:var(--green)}
+.guide-step-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;letter-spacing:-0.2px}
+.guide-step-detail{font-size:11px;color:var(--text2);line-height:1.65}
 
-/* TOAST */
+/* Protect button */
+.protect-btn{
+  display:inline-flex;align-items:center;gap:9px;
+  padding:11px 20px;background:var(--accent);border:none;border-radius:var(--r);
+  color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s ease;letter-spacing:-0.2px;
+}
+.protect-btn:hover{background:#333;transform:translateY(-1px)}
+.protect-btn:active{transform:translateY(0)}
+
+/* Rescan row */
+.rescan-row{display:flex;align-items:center;justify-content:space-between}
+.scan-time{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.rescan-btn{
+  font-size:12px;color:var(--text2);background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:6px 13px;cursor:pointer;font-family:var(--sans);font-weight:500;
+  transition:all .15s;
+}
+.rescan-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+
+/* ── TOAST ── */
 .toast{
-  position:fixed;bottom:30px;left:50%;
-  transform:translateX(-50%) translateY(90px);
-  background:var(--text);color:#fff;border-radius:var(--r2);
-  padding:12px 22px;font-size:13px;font-weight:600;letter-spacing:-.1px;
-  transition:transform .35s var(--ease);z-index:9999;white-space:nowrap;
-  box-shadow:0 8px 32px rgba(0,0,0,.25);will-change:transform;
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--text);color:#fff;
+  border-radius:var(--r2);padding:11px 20px;
+  font-size:13px;font-weight:500;letter-spacing:-0.1px;
+  transition:transform .3s cubic-bezier(.22,1,.36,1);z-index:9999;
+  white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.2);
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
 
-/* RESPONSIVE */
-@media(max-width:1050px){
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
   .layout{grid-template-columns:1fr}
   .sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}
-  .score-row{grid-template-columns:1fr 1fr}
-  .identity-card{grid-template-columns:1fr 1fr}
-  .main{padding:20px 18px 60px}
+  .score-metrics-row{grid-template-columns:1fr 1fr}
+  .main{padding:20px 16px 60px}
 }
-@media(max-width:640px){
-  .score-row{grid-template-columns:1fr}
+@media(max-width:600px){
+  .score-metrics-row{grid-template-columns:1fr}
   .mid-grid{grid-template-columns:1fr}
   .checks-grid{grid-template-columns:1fr}
-  .insights-grid{grid-template-columns:1fr}
-  .identity-card{grid-template-columns:1fr 1fr}
-  .speed-gauges{gap:20px}
+  .speed-divider{display:none}
+  .layout{grid-template-columns:1fr}
 }
+
+/* ── UTIL ── */
+.hidden{display:none!important}
 </style>
 </head>
 <body>
 
+<!-- TOPBAR -->
 <div class="topbar">
-  <div class="logo">
+  <a href="/" class="logo">
     <div class="logo-mark">SH</div>
     <div class="logo-name">Safe<em>Hop</em></div>
-  </div>
+  </a>
   <div class="topbar-right">
-    <div class="live-pill">
+    <div class="live-indicator">
       <div class="live-dot"></div>
-      <span class="live-text">Live mode</span>
+      <span>Live scan</span>
     </div>
-    <span class="topbar-v">v3.0</span>
+    <div class="topbar-badge">v3.0</div>
   </div>
 </div>
 
+<!-- LAYOUT -->
 <div class="layout">
 
+  <!-- SIDEBAR -->
   <aside class="sidebar">
 
-    <div class="scan-block">
-      <div class="scan-block-title">Scan connection</div>
-      <div class="scan-block-sub">Auto-detects IP, VPN, ISP, HTTPS, DNS, and 18 security signals instantly.</div>
+    <!-- Scan CTA -->
+    <div class="scan-cta">
+      <div class="scan-cta-title">Scan your connection</div>
+      <div class="scan-cta-sub">Auto-detects IP, VPN, ISP, HTTPS, and 18 security signals instantly.</div>
       <button class="scan-btn" id="scan-btn" onclick="runScan()">
-        <span class="btn-icon">⟳</span> Scan my connection
+        <span class="btn-icon">⟳</span>
+        Scan my connection
       </button>
     </div>
 
-    <div>
-      <div class="sb-label">Manual Check</div>
-      <div class="manual-wrap">
-        <input class="manual-input" id="manual-input" type="text" placeholder="IP or URL — e.g. 8.8.8.8">
-        <button class="manual-go" onclick="runManualScan()">→ Scan target</button>
+    <!-- Manual check -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Manual Check</div>
+      <div class="manual-form">
+        <input class="manual-input" id="manual-input" type="text" placeholder="IP or URL (e.g. 8.8.8.8)">
+        <button class="manual-btn" onclick="runManualScan()">→ Scan target</button>
       </div>
     </div>
 
-    <div id="sb-actions" style="display:none">
-      <div class="sb-label">Actions</div>
-      <div class="sb-actions">
-        <button class="sb-btn accent" onclick="showGuide()">🛡 Protect My Device</button>
-        <button class="sb-btn" onclick="copyLink()">⎘ Copy link</button>
-        <button class="sb-btn" onclick="copyReport()">↓ Copy full report</button>
+    <!-- Actions (post-scan) -->
+    <div class="sidebar-section" id="sidebar-actions" style="display:none">
+      <div class="sidebar-label">Actions</div>
+      <div class="share-row">
+        <button class="protect-btn" onclick="showGuide()" style="width:100%;justify-content:center">
+          🛡 Protect My Device
+        </button>
+        <button class="share-btn-s" onclick="copyLink()">⎘ Copy link</button>
+        <button class="share-btn-s" onclick="copyReport()">↓ Copy full report</button>
       </div>
     </div>
 
-    <div>
-      <div class="sb-label">Global Stats</div>
-      <div class="sb-stats">
-        <div class="sbstat"><div class="sbstat-val" id="st-total">—</div><div class="sbstat-key">Total</div></div>
-        <div class="sbstat"><div class="sbstat-val" id="st-safe" style="color:var(--green)">—</div><div class="sbstat-key">Safe</div></div>
-        <div class="sbstat"><div class="sbstat-val" id="st-danger" style="color:var(--red)">—</div><div class="sbstat-key">Risky</div></div>
-        <div class="sbstat"><div class="sbstat-val" id="st-avg">—</div><div class="sbstat-key">Avg risk</div></div>
+    <!-- Stats -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Global Stats</div>
+      <div class="sidebar-stats" id="sidebar-stats">
+        <div class="sstat"><div class="sstat-val" id="st-total">—</div><div class="sstat-key">Total</div></div>
+        <div class="sstat"><div class="sstat-val" id="st-safe" style="color:var(--green)">—</div><div class="sstat-key">Safe</div></div>
+        <div class="sstat"><div class="sstat-val" id="st-danger" style="color:var(--red)">—</div><div class="sstat-key">Risky</div></div>
+        <div class="sstat"><div class="sstat-val" id="st-avg">—</div><div class="sstat-key">Avg risk</div></div>
       </div>
     </div>
 
-    <div id="sb-history" style="display:none">
-      <div class="sb-label">Scan History</div>
+    <!-- History -->
+    <div class="sidebar-section" id="history-section" style="display:none">
+      <div class="sidebar-label">Scan History</div>
       <div id="history-list"></div>
     </div>
 
   </aside>
 
+  <!-- MAIN CONTENT -->
   <main class="main">
 
-    <!-- Hero -->
-    <div class="hero" id="hero">
-      <div class="hero-bg">SAFE</div>
-      <div class="hero-tag">Wi-Fi Security Scanner</div>
-      <h1>Is your connection<br><span>safe right now?</span></h1>
-      <p class="hero-desc">SafeHop checks your IP, VPN, ISP, HTTPS, DNS leaks, encryption type, open ports, and browser fingerprint — instantly, no setup required.</p>
+    <!-- Hero (pre-scan) -->
+    <div class="hero-bar" id="hero-bar">
+      <div class="hero-eyebrow">Network security scanner</div>
+      <div class="hero">
+        <h1>Is your connection <em>safe right now?</em></h1>
+      </div>
+      <div class="hero-sub">SafeHop checks your IP, VPN, ISP, HTTPS, DNS, encryption, open ports, and browser fingerprint — instantly, with zero setup.</div>
     </div>
 
-    <!-- Skeleton -->
-    <div class="skeleton" id="skeleton">
-      <div class="sk-row r4">
-        <div class="sk h90"></div><div class="sk h90"></div><div class="sk h90"></div><div class="sk h90"></div>
+    <!-- Loading skeleton -->
+    <div class="skeleton-wrap" id="skeleton">
+      <div class="skeleton-row cols3">
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
+        <div class="skel skel-card"></div>
       </div>
-      <div class="sk-row r2">
-        <div class="sk h140"></div><div class="sk h140"></div>
+      <div class="skeleton-row cols2">
+        <div class="skel skel-wide"></div>
+        <div class="skel skel-wide"></div>
       </div>
-      <div class="sk-row r2">
-        <div class="sk h70"></div><div class="sk h70"></div>
+      <div class="skeleton-row cols2">
+        <div class="skel skel-check"></div>
+        <div class="skel skel-check"></div>
+        <div class="skel skel-check"></div>
+        <div class="skel skel-check"></div>
       </div>
     </div>
 
-    <!-- Results -->
+    <!-- RESULTS -->
     <div class="results" id="results">
 
-      <div class="scan-meta">
-        <span class="scan-time-txt" id="scan-time"></span>
-        <button class="rescan" onclick="runScan()">↻ Scan again</button>
+      <div class="rescan-row">
+        <div class="scan-time" id="scan-time"></div>
+        <button class="rescan-btn" onclick="runScan()">↻ Scan again</button>
       </div>
 
-      <!-- IDENTITY — HERO DATA PANEL -->
-      <div class="identity-panel">
+      <!-- Pills -->
+      <div class="pills-row" id="pills-row"></div>
 
-        <!-- Top row: IP hero + Location + ISP -->
-        <div class="identity-top">
-
-          <!-- IP hero block (dark) -->
-          <div class="id-hero">
-            <div class="id-hero-label">IP Address</div>
-            <div class="id-hero-ip" id="id-ip">—</div>
-            <div class="id-hero-tz" id="id-tz">—</div>
-          </div>
-
-          <!-- Location -->
-          <div class="id-col">
-            <div class="id-col-label">Location</div>
-            <div class="id-col-value" id="id-loc">—</div>
-            <div class="id-col-sub" id="id-country">—</div>
-          </div>
-
-          <!-- ISP -->
-          <div class="id-col">
-            <div class="id-col-label">ISP / Carrier</div>
-            <div class="id-col-value" id="id-isp" style="font-size:15px">—</div>
-            <div class="id-col-sub" id="id-isp-type">—</div>
-          </div>
-
-        </div>
-
-        <!-- Bottom badge row -->
-        <div class="identity-bottom">
-
-          <div class="id-badge-slot">
-            <div class="id-badge-icon neutral" id="badge-icon-https">🔒</div>
-            <div class="id-badge-body">
-              <div class="id-badge-name">HTTPS</div>
-              <div class="id-badge-val neutral" id="tag-https">—</div>
-            </div>
-          </div>
-
-          <div class="id-badge-slot">
-            <div class="id-badge-icon neutral" id="badge-icon-vpn">🛡️</div>
-            <div class="id-badge-body">
-              <div class="id-badge-name">VPN</div>
-              <div class="id-badge-val neutral" id="tag-vpn">—</div>
-            </div>
-          </div>
-
-          <div class="id-badge-slot">
-            <div class="id-badge-icon neutral" id="badge-icon-mobile">📱</div>
-            <div class="id-badge-body">
-              <div class="id-badge-name">Connection</div>
-              <div class="id-badge-val neutral" id="badge-mobile">—</div>
-            </div>
-          </div>
-
-          <div class="id-badge-slot">
-            <div class="id-badge-icon neutral" id="badge-icon-region">🌍</div>
-            <div class="id-badge-body">
-              <div class="id-badge-name">Region risk</div>
-              <div class="id-badge-val neutral" id="badge-region">—</div>
-            </div>
-          </div>
-
-          <div class="id-badge-slot">
-            <div class="id-badge-icon neutral" id="badge-icon-dns">🔍</div>
-            <div class="id-badge-body">
-              <div class="id-badge-name">DNS Privacy</div>
-              <div class="id-badge-val neutral" id="badge-dns">—</div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- Hidden legacy tags for JS compat -->
-        <div style="display:none">
-          <div id="id-tags-hidden">
-            <div class="id-tag" id="tag-https-legacy"></div>
-            <div class="id-tag" id="tag-vpn-legacy"></div>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- SCORE ROW -->
-      <div class="score-row">
-        <div class="ring-card">
-          <div class="ring-outer">
-            <svg width="140" height="140" viewBox="0 0 140 140">
-              <circle class="ring-bg-circle" cx="70" cy="70" r="60"/>
-              <circle class="ring-main" id="ring-fill" cx="70" cy="70" r="60"/>
+      <!-- Score + 3 metrics -->
+      <div class="score-metrics-row">
+        <!-- Ring -->
+        <div class="score-card">
+          <div class="ring-wrap">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <circle class="ring-bg" cx="65" cy="65" r="55"/>
+              <circle class="ring-fill" id="ring-fill" cx="65" cy="65" r="55"/>
             </svg>
             <div class="ring-center">
-              <div class="ring-num" id="ring-score">0</div>
+              <div class="ring-number" id="ring-score">0</div>
             </div>
           </div>
-          <div class="risk-badge" id="risk-badge">—</div>
+          <div class="score-badge" id="score-badge">—</div>
         </div>
-        <div class="metric">
-          <div class="metric-bar" id="mbar1"></div>
+        <!-- Threats -->
+        <div class="metric-card">
+          <div class="metric-accent" id="mc-accent1"></div>
           <div class="metric-label">Threats Found</div>
-          <div class="metric-val" id="m-threats">—</div>
-          <div class="metric-foot" id="m-threats-sub"></div>
+          <div class="metric-value" id="stat-threats" style="color:var(--red)">—</div>
+          <div class="metric-sub" id="stat-threats-sub"></div>
         </div>
-        <div class="metric">
-          <div class="metric-bar" id="mbar2"></div>
+        <!-- Grade -->
+        <div class="metric-card">
+          <div class="metric-accent" id="mc-accent2"></div>
           <div class="metric-label">Security Grade</div>
-          <div class="metric-val" id="m-grade">—</div>
-          <div class="metric-foot">out of A+</div>
+          <div class="metric-value" id="stat-grade">—</div>
+          <div class="metric-sub">out of A+</div>
         </div>
-        <div class="metric">
-          <div class="metric-bar" id="mbar3"></div>
-          <div class="metric-label">Guards Passing</div>
-          <div class="metric-val" id="m-guards">—</div>
-          <div class="metric-foot">protections active</div>
+        <!-- Guards -->
+        <div class="metric-card">
+          <div class="metric-accent" id="mc-accent3"></div>
+          <div class="metric-label">Protections</div>
+          <div class="metric-value" id="stat-guards" style="color:var(--green)">—</div>
+          <div class="metric-sub">active guards</div>
         </div>
       </div>
 
-      <!-- SPEED -->
+      <!-- Smart Insights -->
+      <div class="card">
+        <div class="card-head">
+          <div class="card-head-title">💡 Security Insights</div>
+        </div>
+        <div id="insights-list"></div>
+      </div>
+
+      <!-- Internet Speed Meter -->
       <div class="speed-card">
-        <div class="speed-head">
-          <div class="speed-title">Connection Speed</div>
-          <span class="speed-tag" id="speed-status">estimating...</span>
+        <div class="card-head" style="margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+          <div class="card-head-title">⚡ Connection Speed</div>
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="speed-status">measuring...</span>
         </div>
         <div class="speed-gauges">
-          <div class="g-wrap">
-            <svg width="160" height="90" viewBox="0 0 160 90" style="overflow:visible">
-              <path d="M14 80 A66 66 0 0 1 146 80" fill="none" stroke="var(--surface2)" stroke-width="10" stroke-linecap="round"/>
-              <path id="dl-arc" d="M14 80 A66 66 0 0 1 146 80" fill="none" stroke="var(--green)" stroke-width="10" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="207" style="transition:stroke-dashoffset 1.5s var(--ease);will-change:stroke-dashoffset"/>
-            </svg>
-            <div class="g-num" id="dl-val">—</div>
-            <div class="g-unit">Mbps</div>
-            <div class="g-dir">↓ Download</div>
+          <div class="gauge-wrap">
+            <div class="gauge-svg-wrap">
+              <svg width="120" height="70" viewBox="0 0 120 70">
+                <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--surface2)" stroke-width="8" stroke-linecap="round"/>
+                <path id="dl-arc" d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--green)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)"/>
+              </svg>
+            </div>
+            <div class="gauge-val"><span id="dl-val">—</span> <span class="gauge-unit">Mbps</span></div>
+            <div class="gauge-label">↓ Download</div>
           </div>
-          <div class="sp-div"></div>
-          <div class="g-wrap">
-            <svg width="160" height="90" viewBox="0 0 160 90" style="overflow:visible">
-              <path d="M14 80 A66 66 0 0 1 146 80" fill="none" stroke="var(--surface2)" stroke-width="10" stroke-linecap="round"/>
-              <path id="ul-arc" d="M14 80 A66 66 0 0 1 146 80" fill="none" stroke="#1e40af" stroke-width="10" stroke-linecap="round" stroke-dasharray="207" stroke-dashoffset="207" style="transition:stroke-dashoffset 1.5s var(--ease);will-change:stroke-dashoffset"/>
-            </svg>
-            <div class="g-num" id="ul-val">—</div>
-            <div class="g-unit">Mbps</div>
-            <div class="g-dir">↑ Upload</div>
+          <div class="speed-divider"></div>
+          <div class="gauge-wrap">
+            <div class="gauge-svg-wrap">
+              <svg width="120" height="70" viewBox="0 0 120 70">
+                <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--surface2)" stroke-width="8" stroke-linecap="round"/>
+                <path id="ul-arc" d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--blue)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)"/>
+              </svg>
+            </div>
+            <div class="gauge-val"><span id="ul-val">—</span> <span class="gauge-unit">Mbps</span></div>
+            <div class="gauge-label">↑ Upload</div>
           </div>
         </div>
       </div>
 
-      <!-- INSIGHTS -->
-      <div class="card">
-        <div class="card-title">Security Insights</div>
-        <div class="insights-grid" id="insights-grid"></div>
-      </div>
-
-      <!-- BREAKDOWN + RECS -->
+      <!-- Breakdown + Recommendations -->
       <div class="mid-grid">
         <div class="card">
-          <div class="card-title">Score Breakdown</div>
+          <div class="card-head"><div class="card-head-title">Score Breakdown</div></div>
           <div id="breakdown-list"></div>
         </div>
         <div class="card">
-          <div class="card-title">What to fix</div>
+          <div class="card-head"><div class="card-head-title">Recommendations</div></div>
           <div id="rec-list"></div>
         </div>
       </div>
 
-      <!-- CHECKS -->
+      <!-- Security Checks -->
       <div class="card">
-        <div class="card-title">
-          Security Checks
-          <span class="card-title-right" id="checks-count"></span>
+        <div class="card-head">
+          <div class="card-head-title">Security Checks</div>
+          <span id="checks-count" style="font-size:10px;color:var(--text3);font-family:var(--mono)"></span>
         </div>
         <div class="checks-grid" id="checks-grid"></div>
       </div>
 
-    </div>
-  </main>
-</div>
+    </div><!-- /results -->
 
-<!-- Modal -->
-<div class="overlay" id="guide-overlay" onclick="closeGuide(event)">
+  </main>
+
+</div><!-- /layout -->
+
+<!-- Protect Modal -->
+<div class="modal-overlay" id="guide-modal" onclick="closeGuide(event)">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-head">
       <div>
         <div class="modal-title">🛡 Protect My Device</div>
-        <div class="modal-sub">Personalised steps based on your scan — most critical issues first.</div>
+        <div class="modal-sub">Personalized security steps based on your scan results</div>
       </div>
-      <button class="modal-x" onclick="closeGuide()">✕</button>
+      <button class="modal-close" onclick="closeGuide()">✕</button>
     </div>
-    <div class="modal-body" id="guide-body"></div>
+    <div class="modal-body" id="guide-steps"></div>
   </div>
 </div>
 
+<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
@@ -770,341 +692,343 @@ var lastResult = null;
 var scanHistory = [];
 var guideData = null;
 
-function toast(msg) {
-  var el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(function(){ el.classList.remove('show'); }, 2600);
+// ── TOAST ──────────────────────────────────────────────────────────
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
 }
 
+// ── SCAN (AUTO) ────────────────────────────────────────────────────
 function runScan() {
-  startUI();
+  startScanUI();
   fetch('/auto-scan')
-    .then(function(r){ return r.json(); })
-    .then(function(d){ lastResult = d; render(d); loadStats(); })
-    .catch(function(){ toast('Scan failed — try again'); stopUI(); });
+    .then(function(r) { return r.json(); })
+    .then(function(res) { lastResult = res; showResults(res); loadStats(); })
+    .catch(function() { showToast('Scan failed — please try again'); stopScanUI(); });
 }
 
+// ── SCAN (MANUAL) ─────────────────────────────────────────────────
 function runManualScan() {
-  var t = document.getElementById('manual-input').value.trim();
-  if (!t) { toast('Enter an IP or URL first'); return; }
-  startUI();
+  var target = document.getElementById('manual-input').value.trim();
+  if (!target) { showToast('Enter an IP or URL to scan'); return; }
+  startScanUI();
   fetch('/manual-scan', {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({target: t})
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ target: target })
   })
-  .then(function(r){ return r.json(); })
-  .then(function(d){
-    if (d.error) { toast('Error: ' + d.error); stopUI(); return; }
-    lastResult = d; render(d); loadStats();
-  })
-  .catch(function(){ toast('Scan failed — try again'); stopUI(); });
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.error) { showToast('Error: ' + res.error); stopScanUI(); return; }
+      lastResult = res; showResults(res); loadStats();
+    })
+    .catch(function() { showToast('Scan failed — please try again'); stopScanUI(); });
 }
 
-function startUI() {
+function startScanUI() {
   var btn = document.getElementById('scan-btn');
   btn.classList.add('scanning');
   btn.innerHTML = '<span class="btn-icon">⟳</span> Scanning...';
-  document.getElementById('hero').style.display = 'none';
+  btn.disabled = true;
+  document.getElementById('hero-bar').style.display = 'none';
   document.getElementById('skeleton').classList.add('show');
   document.getElementById('results').classList.remove('show');
 }
 
-function stopUI() {
+function stopScanUI() {
   var btn = document.getElementById('scan-btn');
   btn.classList.remove('scanning');
   btn.innerHTML = '<span class="btn-icon">⟳</span> Scan my connection';
+  btn.disabled = false;
   document.getElementById('skeleton').classList.remove('show');
 }
 
-function render(r) {
-  stopUI();
+// ── SHOW RESULTS ───────────────────────────────────────────────────
+function showResults(r) {
+  stopScanUI();
   var d = r.detected;
   var cls = r.level === 'Safe' ? 'safe' : r.level === 'Moderate' ? 'warn' : 'danger';
   var color = cls === 'safe' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)';
+
+  // Store guide data
   guideData = r.secure_guide || [];
 
-  document.getElementById('scan-time').textContent =
-    'Scanned ' + new Date().toLocaleTimeString() +
-    (d.manual_target ? '  ·  ' + d.manual_target : '');
+  // Scan time
+  document.getElementById('scan-time').textContent = 'Scanned at ' + new Date().toLocaleTimeString() +
+    (d.manual_target ? ' · ' + d.manual_target : '');
 
-  /* Identity — BIG */
-  document.getElementById('id-ip').textContent = d.ip || '—';
-  document.getElementById('id-tz').textContent = d.timezone || '—';
-  document.getElementById('id-loc').textContent = d.city + (d.region ? ', ' + d.region : '');
-  document.getElementById('id-country').textContent = d.country || '—';
+  // Pills
+  var pr = document.getElementById('pills-row');
+  pr.innerHTML =
+    pill('IP', d.ip, '') +
+    pill('ISP', d.isp || 'Unknown', '') +
+    pill('Location', d.city + (d.region ? ', '+d.region : '') + ', ' + d.country, '') +
+    pill('Timezone', d.timezone, '') +
+    pill('HTTPS', d.is_https ? 'Yes' : 'No', d.is_https ? 'good' : 'bad') +
+    pill('VPN', d.vpn ? 'Detected' : 'None', d.vpn ? 'good' : 'warn') +
+    pill('Mobile', d.is_mobile ? 'Yes' : 'No', d.is_mobile ? 'warn' : '');
 
-  var ispEl = document.getElementById('id-isp');
-  ispEl.textContent = d.isp || 'Unknown';
-  document.getElementById('id-isp-type').textContent = d.is_mobile ? 'Mobile carrier' : 'Broadband / Fiber';
-
-  /* Legacy compat */
-  var th = document.getElementById('tag-https');
-  var tv = document.getElementById('tag-vpn');
-  if(th){th.textContent=d.is_https?'✓ HTTPS':'✗ No HTTPS';th.className='id-tag '+(d.is_https?'green':'red');}
-  if(tv){tv.textContent=d.vpn?'✓ VPN Active':'✗ No VPN';tv.className='id-tag '+(d.vpn?'green':'amber');}
-
-  /* ── NEW BADGE PANEL ── */
-  function setBadge(iconId,valId,icon,label,cls){
-    var ic=document.getElementById(iconId);
-    var vl=document.getElementById(valId);
-    if(ic){ic.className='id-badge-icon '+cls;ic.textContent=icon;}
-    if(vl){vl.className='id-badge-val '+cls;vl.textContent=label;}
-  }
-  // HTTPS badge
-  setBadge('badge-icon-https','tag-https',
-    d.is_https?'🔒':'🔓',
-    d.is_https?'Encrypted':'Unencrypted',
-    d.is_https?'green':'red');
-
-  // VPN badge
-  setBadge('badge-icon-vpn','tag-vpn',
-    d.vpn?'🛡️':'⚠️',
-    d.vpn?'VPN Active':'No VPN',
-    d.vpn?'green':'amber');
-
-  // Mobile / connection type badge
-  setBadge('badge-icon-mobile','badge-mobile',
-    d.is_mobile?'📱':'🖥️',
-    d.is_mobile?'Mobile Data':'Broadband',
-    d.is_mobile?'amber':'neutral');
-
-  // Region risk badge
-  var highRisk=['China','Russia','Iran','North Korea','Belarus','Syria'];
-  var isHighRisk=highRisk.indexOf(d.country||'')!==-1;
-  setBadge('badge-icon-region','badge-region',
-    isHighRisk?'🚨':'🌍',
-    isHighRisk?'High Risk':'Standard',
-    isHighRisk?'red':'green');
-
-  // DNS Privacy badge
-  setBadge('badge-icon-dns','badge-dns',
-    d.vpn?'🔐':'🔍',
-    d.vpn?'Protected':'Exposed',
-    d.vpn?'green':'amber');
-
-  /* Ring */
-  var circ = 2 * Math.PI * 60;
+  // Ring animation
+  var circ = 2 * Math.PI * 55; // r=55
+  var offset = circ - (r.risk / 100) * circ;
   var ring = document.getElementById('ring-fill');
   ring.style.stroke = color;
   ring.style.strokeDasharray = circ;
+  // Trigger reflow then animate
   ring.style.strokeDashoffset = circ;
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      ring.style.strokeDashoffset = circ - (r.risk / 100) * circ;
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      ring.style.strokeDashoffset = offset;
     });
   });
 
-  var el = document.getElementById('ring-score');
-  el.style.color = color;
-  var count = 0, tgt = r.risk;
-  var iv = setInterval(function(){
-    count = Math.min(count + Math.ceil(tgt / 35), tgt);
-    el.textContent = count;
-    if (count >= tgt) clearInterval(iv);
-  }, 22);
+  // Count-up score
+  var scoreEl = document.getElementById('ring-score');
+  scoreEl.style.color = color;
+  var count = 0, target_ = r.risk;
+  var timer = setInterval(function() {
+    count = Math.min(count + Math.ceil(target_ / 40), target_);
+    scoreEl.textContent = count;
+    if (count >= target_) clearInterval(timer);
+  }, 20);
 
-  var badge = document.getElementById('risk-badge');
-  badge.className = 'risk-badge ' + cls;
-  badge.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block"></span>' + r.level;
+  // Badge
+  var badge = document.getElementById('score-badge');
+  badge.className = 'score-badge ' + cls;
+  badge.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0"></span>' + r.level;
 
-  ['mbar1','mbar2','mbar3'].forEach(function(id){
-    document.getElementById(id).className = 'metric-bar ' + cls;
+  // Metric accents
+  ['mc-accent1','mc-accent2','mc-accent3'].forEach(function(id) {
+    document.getElementById(id).className = 'metric-accent ' + cls;
   });
 
-  var te = document.getElementById('m-threats');
-  te.textContent = r.threats;
-  te.style.color = r.threats > 0 ? 'var(--red)' : 'var(--green)';
-  document.getElementById('m-threats-sub').textContent = r.threats > 0 ? 'issues detected' : 'all clear';
+  // Threats
+  var threatEl = document.getElementById('stat-threats');
+  threatEl.textContent = r.threats;
+  threatEl.style.color = r.threats > 0 ? 'var(--red)' : 'var(--green)';
+  document.getElementById('stat-threats-sub').textContent = r.threats > 0 ? 'issues detected' : 'all clear';
 
-  var ge = document.getElementById('m-grade');
-  ge.textContent = r.grade;
-  ge.style.color = color;
-  document.getElementById('m-guards').textContent = r.protections;
+  // Grade
+  var gradeEl = document.getElementById('stat-grade');
+  gradeEl.textContent = r.grade;
+  gradeEl.style.color = color;
 
-  /* Speed */
-  animateSpeed(d);
+  // Guards
+  document.getElementById('stat-guards').textContent = r.protections;
 
-  /* Insights — editorial headings + clean descriptions */
-  var ig = document.getElementById('insights-grid');
-  ig.innerHTML = '';
+  // Insights
+  var insightsList = document.getElementById('insights-list');
+  insightsList.innerHTML = '';
   if (r.insights && r.insights.length) {
-    r.insights.forEach(function(ins, i){
-      ig.innerHTML +=
-        '<div class="ins-tile" style="animation-delay:' + (i * 0.07) + 's">' +
-        '<div class="ins-icon ' + ins.severity + '">' + ins.icon + '</div>' +
-        '<div>' +
-          '<div class="ins-head">' + toHeading(ins.text, ins.severity) + '</div>' +
-          '<div class="ins-desc">' + stripOpener(ins.text) + '</div>' +
-        '</div></div>';
+    r.insights.forEach(function(ins) {
+      insightsList.innerHTML +=
+        '<div class="insight-item">' +
+        '<div class="insight-icon ' + ins.severity + '">' + ins.icon + '</div>' +
+        '<div class="insight-text">' + ins.text + '</div>' +
+        '</div>';
     });
   }
 
-  /* Breakdown */
+  // Speed meter
+  simulateSpeed(d);
+
+  // Breakdown bars
   var bl = document.getElementById('breakdown-list');
   bl.innerHTML = '';
-  r.breakdown.forEach(function(item){
+  r.breakdown.forEach(function(item) {
     var pct = Math.round((item.points / item.max) * 100);
     var c = item.points === 0 ? 'var(--green)' : item.points <= 10 ? 'var(--amber)' : 'var(--red)';
     bl.innerHTML += '<div class="bar-item">' +
       '<div class="bar-row"><span class="bar-name">' + item.label + '</span>' +
-      '<span class="bar-pts" style="color:' + c + '">+' + item.points + ' / ' + item.max + '</span></div>' +
-      '<div class="bar-track"><div class="bar-fill" style="background:' + c + '" data-w="' + pct + '"></div></div>' +
+      '<span class="bar-pts" style="color:' + c + '">+' + item.points + '</span></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + c + '"></div></div>' +
       '</div>';
   });
-  setTimeout(function(){
-    bl.querySelectorAll('.bar-fill').forEach(function(b){ b.style.width = b.dataset.w + '%'; });
-  }, 80);
 
-  /* Recs */
+  // Recommendations
   var rl = document.getElementById('rec-list');
   rl.innerHTML = '';
-  r.recommendations.forEach(function(rec, i){
-    rl.innerHTML +=
-      '<div class="rec-item" style="animation-delay:' + (i * 0.05) + 's">' +
-      '<div class="rec-icon ' + rec.type + '">' + (rec.type === 'bad' ? '✕' : '✓') + '</div>' +
-      '<div class="rec-text">' + rec.text + '</div></div>';
+  r.recommendations.forEach(function(rec) {
+    rl.innerHTML += '<div class="rec-item"><div class="rec-dot ' + rec.type + '"></div><span>' + rec.text + '</span></div>';
   });
 
-  /* Checks */
+  // Checks
   var cg = document.getElementById('checks-grid');
   cg.innerHTML = '';
-  var pass = 0, fail = 0;
-  r.checks.forEach(function(chk, i){
-    if (chk.status === 'pass') pass++;
-    if (chk.status === 'fail') fail++;
-    var ext = chk.extra ? ' <span style="color:var(--text3);font-size:9px;font-family:var(--mono)">[' + chk.extra + ']</span>' : '';
-    cg.innerHTML +=
-      '<div class="check" style="animation-delay:' + (i * 0.025) + 's">' +
-      '<div class="chk-icon ' + chk.status + '">' + chk.icon + '</div>' +
-      '<div class="chk-body">' +
-        '<div class="chk-name">' + chk.name + ext + '</div>' +
-        '<div class="chk-detail">' + chk.detail + '</div>' +
+  var passCount = 0, failCount = 0;
+  r.checks.forEach(function(chk) {
+    if (chk.status === 'pass') passCount++;
+    if (chk.status === 'fail') failCount++;
+    var extra = chk.extra ? ' <span style="color:var(--text3);font-size:9px;margin-left:4px;font-family:var(--mono)">[' + chk.extra + ']</span>' : '';
+    cg.innerHTML += '<div class="check-item">' +
+      '<div class="check-icon-wrap ' + chk.status + '">' + chk.icon + '</div>' +
+      '<div class="check-info">' +
+        '<div class="check-name">' + chk.name + extra + '</div>' +
+        '<div class="check-detail">' + chk.detail + '</div>' +
       '</div>' +
-      '<div class="chk-pill ' + chk.status + '">' + chk.status + '</div></div>';
+      '<div class="check-badge ' + chk.status + '">' + chk.status + '</div>' +
+      '</div>';
   });
-  document.getElementById('checks-count').textContent = pass + ' passed · ' + fail + ' failed';
+  document.getElementById('checks-count').textContent = passCount + ' passed · ' + failCount + ' failed';
 
-  /* History */
-  scanHistory.unshift({ip: d.ip, level: r.level, score: r.risk, cls: cls});
+  // History
+  scanHistory.unshift({
+    ip: d.ip, city: d.city, country: d.country,
+    score: r.risk, level: r.level, cls: cls,
+    time: new Date().toLocaleTimeString()
+  });
   if (scanHistory.length > 8) scanHistory.pop();
-  renderHistory();
+  updateHistory();
 
-  document.getElementById('sb-actions').style.display = 'block';
+  // Show sidebar actions
+  document.getElementById('sidebar-actions').style.display = 'block';
+
+  // Show results
   document.getElementById('results').classList.add('show');
-  setTimeout(function(){
-    document.getElementById('results').scrollIntoView({behavior:'smooth', block:'start'});
+  setTimeout(function() {
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, 100);
 }
 
-function toHeading(text, sev) {
-  if (/no vpn/i.test(text) || /ip.*exposed/i.test(text)) return 'IP Address Exposed';
-  if (/vpn active|vpn.*masked/i.test(text)) return 'VPN Tunnel Active';
-  if (/https.*encrypt|end-to-end/i.test(text)) return 'Fully Encrypted';
-  if (/lacks https|no https|unencrypt/i.test(text)) return 'Traffic Unencrypted';
-  if (/mobile data/i.test(text)) return 'Mobile Data Network';
-  if (/datacenter/i.test(text)) return 'Datacenter IP Detected';
-  if (/residential.*broadband/i.test(text)) return 'Residential Broadband';
-  if (/high risk/i.test(text)) return 'High Risk Detected';
-  if (/moderate risk/i.test(text)) return 'Moderate Risk';
-  if (/low risk|looks secure/i.test(text)) return 'Connection Looks Clean';
-  return sev === 'high' ? 'Security Issue' : sev === 'medium' ? 'Heads Up' : 'Network Info';
-}
+// ── SPEED METER ────────────────────────────────────────────────────
+function simulateSpeed(detected) {
+  // Realistic simulation based on connection type
+  var isMobile = detected && detected.is_mobile;
+  var isVpn = detected && detected.vpn;
 
-function stripOpener(text) {
-  return text
-    .replace(/^(Your (connection|ISP|IP) suggests? |No VPN detected — |VPN active — )/i, '')
-    .trim();
-}
+  var dlBase = isMobile ? (Math.random() * 60 + 15) : (Math.random() * 200 + 30);
+  var ulBase = isMobile ? (Math.random() * 20 + 5) : (Math.random() * 80 + 10);
+  if (isVpn) { dlBase *= 0.7; ulBase *= 0.7; } // VPN overhead
 
-function animateSpeed(d) {
-  var isMobile = d && d.is_mobile;
-  var isVpn = d && d.vpn;
-  var dl = isMobile ? Math.round((Math.random()*55+12)*10)/10 : Math.round((Math.random()*220+35)*10)/10;
-  var ul = isMobile ? Math.round((Math.random()*18+4)*10)/10 : Math.round((Math.random()*90+10)*10)/10;
-  if (isVpn) { dl = Math.round(dl*.72*10)/10; ul = Math.round(ul*.72*10)/10; }
+  var dl = Math.round(dlBase * 10) / 10;
+  var ul = Math.round(ulBase * 10) / 10;
+
   document.getElementById('speed-status').textContent = 'estimated';
-  setTimeout(function(){
+
+  // Animate after short delay
+  setTimeout(function() {
     document.getElementById('dl-val').textContent = dl;
     document.getElementById('ul-val').textContent = ul;
-    var arc = 207;
-    document.getElementById('dl-arc').style.strokeDashoffset = arc - (Math.min(dl/300,1)*arc);
-    document.getElementById('ul-arc').style.strokeDashoffset = arc - (Math.min(ul/100,1)*arc);
-  }, 700);
+
+    // Arc lengths: max display ~300 Mbps for DL, 100 for UL
+    var dlPct = Math.min(dl / 300, 1);
+    var ulPct = Math.min(ul / 100, 1);
+    var arcLen = 157; // half-circle arc
+
+    document.getElementById('dl-arc').style.strokeDashoffset = arcLen - (dlPct * arcLen);
+    document.getElementById('ul-arc').style.strokeDashoffset = arcLen - (ulPct * arcLen);
+  }, 600);
 }
 
-function renderHistory() {
-  if (!scanHistory.length) return;
-  document.getElementById('sb-history').style.display = 'block';
-  document.getElementById('history-list').innerHTML = scanHistory.map(function(h, i){
-    var sc = h.cls === 'safe' ? 'var(--green)' : h.cls === 'warn' ? 'var(--amber)' : 'var(--red)';
-    return '<div class="hist-row" style="animation-delay:' + (i*.05) + 's">' +
-      '<span class="hist-ip">' + h.ip + '</span>' +
-      '<span class="hist-badge ' + h.cls + '">' + h.level + '</span>' +
-      '<span class="hist-score" style="color:' + sc + '">' + h.score + '</span></div>';
+// ── HELPER ─────────────────────────────────────────────────────────
+function pill(key, val, cls) {
+  return '<div class="pill ' + cls + '"><span class="pill-key">' + key + '</span>' + val + '</div>';
+}
+
+// ── HISTORY ────────────────────────────────────────────────────────
+function updateHistory() {
+  if (scanHistory.length === 0) return;
+  var hs = document.getElementById('history-section');
+  var hl = document.getElementById('history-list');
+  hs.style.display = 'block';
+  hl.innerHTML = scanHistory.map(function(h) {
+    var scoreColor = h.cls === 'safe' ? 'var(--green)' : h.cls === 'warn' ? 'var(--amber)' : 'var(--red)';
+    return '<div class="side-history-row">' +
+      '<span class="sh-ip">' + h.ip + '</span>' +
+      '<span class="sh-badge ' + h.cls + '">' + h.level + '</span>' +
+      '<span class="sh-score" style="color:' + scoreColor + '">' + h.score + '</span>' +
+      '</div>';
   }).join('');
 }
 
+// ── STATS ─────────────────────────────────────────────────────────
 function loadStats() {
-  fetch('/stats').then(function(r){ return r.json(); }).then(function(s){
-    document.getElementById('st-total').textContent = s.total;
-    document.getElementById('st-safe').textContent = s.safe;
-    document.getElementById('st-danger').textContent = s.dangerous;
-    document.getElementById('st-avg').textContent = s.avg_risk;
-  }).catch(function(){});
+  fetch('/stats')
+    .then(function(r) { return r.json(); })
+    .then(function(s) {
+      document.getElementById('st-total').textContent = s.total;
+      document.getElementById('st-safe').textContent = s.safe;
+      document.getElementById('st-danger').textContent = s.dangerous;
+      document.getElementById('st-avg').textContent = s.avg_risk;
+    }).catch(function() {});
 }
 
+// ── GUIDE MODAL ────────────────────────────────────────────────────
 function showGuide() {
-  if (!guideData || !guideData.length) { toast('Run a scan first'); return; }
-  var body = document.getElementById('guide-body');
+  if (!guideData || !guideData.length) { showToast('Run a scan first'); return; }
+  var body = document.getElementById('guide-steps');
   body.innerHTML = '';
-  guideData.forEach(function(s){
-    body.innerHTML += '<div class="step-card">' +
-      '<div class="step-num ' + s.priority + '">' + s.step + '</div>' +
-      '<div><div class="step-title">' + s.title + '</div>' +
-      '<div class="step-detail">' + s.detail + '</div></div></div>';
+  guideData.forEach(function(step) {
+    body.innerHTML +=
+      '<div class="guide-step">' +
+      '<div class="guide-step-num ' + step.priority + '">' + step.step + '</div>' +
+      '<div>' +
+        '<div class="guide-step-title">' + step.title + '</div>' +
+        '<div class="guide-step-detail">' + step.detail + '</div>' +
+      '</div>' +
+      '</div>';
   });
-  document.getElementById('guide-overlay').classList.add('show');
+  document.getElementById('guide-modal').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
 
 function closeGuide(e) {
-  if (e && e.target !== document.getElementById('guide-overlay')) return;
-  document.getElementById('guide-overlay').classList.remove('show');
+  if (e && e.target !== document.getElementById('guide-modal')) return;
+  document.getElementById('guide-modal').classList.remove('show');
   document.body.style.overflow = '';
 }
 
-document.addEventListener('keydown', function(e){
-  if (e.key === 'Escape') {
-    document.getElementById('guide-overlay').classList.remove('show');
-    document.body.style.overflow = '';
-  }
+// Close on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeGuide({target: document.getElementById('guide-modal')});
 });
 
+// ── SHARE ─────────────────────────────────────────────────────────
 function copyLink() {
   navigator.clipboard.writeText(window.location.href)
-    .then(function(){ toast('✓ Link copied'); })
-    .catch(function(){ toast('Could not copy'); });
+    .then(function() { showToast('✓ Link copied to clipboard'); })
+    .catch(function() { showToast('Could not copy link'); });
 }
 
 function copyReport() {
-  if (!lastResult) { toast('Run a scan first'); return; }
-  var r = lastResult, d = r.detected;
-  var txt = ['=== SafeHop Security Report ===','Scanned: '+new Date().toLocaleString(),'',
-    'IP: '+d.ip,'ISP: '+d.isp,'Location: '+d.city+', '+d.country,
-    'HTTPS: '+(d.is_https?'Yes':'No'),'VPN: '+(d.vpn?'Detected':'None'),'',
-    'RISK: '+r.risk+'/100 — '+r.level+' (Grade: '+r.grade+')','THREATS: '+r.threats,'',
+  if (!lastResult) { showToast('Run a scan first'); return; }
+  var r = lastResult; var d = r.detected;
+  var report = [
+    '=== SafeHop Security Report ===',
+    'Scanned: ' + new Date().toLocaleString(),
+    '',
+    'IP: ' + d.ip,
+    'ISP: ' + d.isp,
+    'Location: ' + d.city + ', ' + d.country,
+    'Timezone: ' + d.timezone,
+    'HTTPS: ' + (d.is_https ? 'Yes' : 'No'),
+    'VPN: ' + (d.vpn ? 'Detected' : 'None'),
+    '',
+    'RISK SCORE: ' + r.risk + '/100',
+    'LEVEL: ' + r.level,
+    'GRADE: ' + r.grade,
+    'THREATS: ' + r.threats,
+    '',
     '--- Recommendations ---',
-    r.recommendations.map(function(rec){ return (rec.type==='bad'?'✗':'✓')+' '+rec.text; }).join('\n'),'',
-    'SafeHop — '+window.location.href].join('\n');
-  navigator.clipboard.writeText(txt)
-    .then(function(){ toast('✓ Report copied'); })
-    .catch(function(){ toast('Could not copy'); });
+    r.recommendations.map(function(rec) {
+      return (rec.type === 'bad' ? '✗' : '✓') + ' ' + rec.text;
+    }).join('\n'),
+    '',
+    'Generated by SafeHop — ' + window.location.href
+  ].join('\n');
+
+  navigator.clipboard.writeText(report)
+    .then(function() { showToast('✓ Full report copied'); })
+    .catch(function() { showToast('Could not copy report'); });
 }
 
+// ── INIT ──────────────────────────────────────────────────────────
 loadStats();
-document.getElementById('manual-input').addEventListener('keydown', function(e){
+
+// Manual input — trigger on Enter
+document.getElementById('manual-input').addEventListener('keydown', function(e) {
   if (e.key === 'Enter') runManualScan();
 });
 </script>
