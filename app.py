@@ -1,1036 +1,524 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeHop — Wi-Fi Security Scanner</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f8f8f6;
-  --surface:#ffffff;
-  --surface2:#f3f3f0;
-  --surface3:#eceae6;
-  --border:#e5e3de;
-  --border2:#d6d3cd;
-  --text:#1a1916;
-  --text2:#6b6860;
-  --text3:#a09d98;
-  --green:#16a34a;--green-light:#dcfce7;--green-mid:rgba(22,163,74,0.12);
-  --amber:#b45309;--amber-light:#fef3c7;--amber-mid:rgba(180,83,9,0.10);
-  --red:#dc2626;--red-light:#fee2e2;--red-mid:rgba(220,38,38,0.10);
-  --blue:#1d4ed8;--blue-light:#dbeafe;
-  --accent:#1a1916;
-  --sans:'DM Sans',sans-serif;
-  --mono:'DM Mono',monospace;
-  --r:8px;--r2:12px;--r3:16px;--r4:20px;
-  --sh:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);
-  --sh2:0 2px 8px rgba(0,0,0,0.08),0 8px 32px rgba(0,0,0,0.06);
-}
-html,body{height:100%;font-family:var(--sans);background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+import os
+import json
+import sqlite3
+import requests
+from datetime import datetime
+from flask import Flask, render_template, request, jsonify, g
 
-/* ── TOPBAR ── */
-.topbar{
-  position:sticky;top:0;z-index:100;
-  height:52px;background:rgba(248,248,246,0.92);
-  border-bottom:1px solid var(--border);
-  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 28px;
-}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-.logo-mark{
-  width:30px;height:30px;border-radius:8px;
-  background:var(--accent);
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:600;color:#fff;font-family:var(--mono);letter-spacing:-0.5px;
-}
-.logo-name{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.4px}
-.logo-name em{font-style:normal;color:var(--text2);font-weight:400}
-.topbar-right{display:flex;align-items:center;gap:14px}
-.live-indicator{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:breathe 2.5s ease-in-out infinite}
-@keyframes breathe{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(22,163,74,0.4)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(22,163,74,0)}}
-.topbar-badge{
-  font-size:11px;font-family:var(--mono);color:var(--text3);
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:20px;padding:3px 10px;letter-spacing:0.3px;
-}
+app = Flask(__name__)
+DATABASE = '/tmp/safehop.db'
 
-/* ── LAYOUT ── */
-.layout{display:grid;grid-template-columns:280px 1fr;min-height:calc(100vh - 52px);max-width:1280px;margin:0 auto}
+USE_FIREBASE = False
+db_firebase = None
 
-/* ── SIDEBAR ── */
-.sidebar{
-  border-right:1px solid var(--border);
-  padding:28px 20px;
-  background:var(--surface);
-  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;
-  display:flex;flex-direction:column;gap:24px;
-}
-.sidebar-section{}
-.sidebar-label{
-  font-size:10px;font-family:var(--mono);color:var(--text3);
-  letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px;
-  display:flex;align-items:center;gap:8px;
-}
-.sidebar-label::after{content:'';flex:1;height:1px;background:var(--border)}
+try:
+    import firebase_admin
+    from firebase_admin import credentials, firestore as fs
+    raw_key = os.environ.get("FIREBASE_KEY", "")
+    if raw_key:
+        key_dict = json.loads(raw_key)
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(key_dict)
+            firebase_admin.initialize_app(cred)
+        db_firebase = fs.client()
+        USE_FIREBASE = True
+        print("Firebase connected")
+    else:
+        print("No FIREBASE_KEY - using SQLite only")
+except Exception as ex:
+    print("Firebase init failed: " + str(ex))
 
-/* Scan CTA in sidebar */
-.scan-cta{
-  background:var(--accent);border-radius:var(--r2);
-  padding:20px;color:#fff;
-}
-.scan-cta-title{font-size:16px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px}
-.scan-cta-sub{font-size:12px;color:rgba(255,255,255,0.6);line-height:1.55;margin-bottom:16px}
-.scan-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;padding:11px 18px;
-  background:#fff;border:none;border-radius:var(--r);
-  color:var(--accent);font-family:var(--sans);font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .15s ease;letter-spacing:-0.2px;
-}
-.scan-btn:hover{background:rgba(255,255,255,0.9);transform:translateY(-1px)}
-.scan-btn:active{transform:translateY(0)}
-.scan-btn.scanning{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);cursor:not-allowed}
-.scan-btn .btn-icon{font-size:14px;transition:transform .3s}
-.scan-btn.scanning .btn-icon{animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
+def get_db():
+    db = getattr(g, '_db', None)
+    if db is None:
+        db = g._db = sqlite3.connect(DATABASE)
+        db.row_factory = sqlite3.Row
+    return db
 
-/* Manual check */
-.manual-form{display:flex;flex-direction:column;gap:8px}
-.manual-input{
-  width:100%;padding:9px 12px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:var(--r);
-  font-family:var(--mono);font-size:12px;color:var(--text);
-  transition:border-color .15s;outline:none;
-}
-.manual-input:focus{border-color:var(--accent);background:var(--surface)}
-.manual-input::placeholder{color:var(--text3)}
-.manual-btn{
-  width:100%;padding:9px;background:var(--surface2);
-  border:1px solid var(--border);border-radius:var(--r);
-  font-family:var(--sans);font-size:12px;font-weight:500;color:var(--text2);
-  cursor:pointer;transition:all .15s;
-}
-.manual-btn:hover{background:var(--surface3);color:var(--text);border-color:var(--border2)}
+@app.teardown_appcontext
+def close_db(e):
+    db = getattr(g, '_db', None)
+    if db:
+        db.close()
 
-/* Sidebar stats */
-.sidebar-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.sstat{
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--r);padding:12px;text-align:center;
-}
-.sstat-val{font-size:20px;font-weight:600;font-family:var(--mono);color:var(--text);line-height:1}
-.sstat-key{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:0.5px;text-transform:uppercase;margin-top:3px}
+def init_db():
+    with app.app_context():
+        db = get_db()
+        db.execute('''CREATE TABLE IF NOT EXISTS scans (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ip TEXT, city TEXT, country TEXT, isp TEXT,
+            timezone TEXT, is_https INTEGER, vpn INTEGER,
+            risk INTEGER, level TEXT, grade TEXT,
+            threats INTEGER, scanned_at TEXT
+        )''')
+        db.commit()
 
-/* Sidebar history */
-.side-history-row{
-  display:flex;align-items:center;gap:8px;
-  padding:8px 0;border-bottom:1px solid var(--border);
-  font-size:11px;
-}
-.side-history-row:last-child{border-bottom:none}
-.sh-ip{font-family:var(--mono);color:var(--text2);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sh-badge{
-  font-size:9px;font-family:var(--mono);font-weight:500;
-  padding:2px 7px;border-radius:4px;flex-shrink:0;
-  letter-spacing:0.5px;text-transform:uppercase;
-}
-.sh-badge.safe{color:var(--green);background:var(--green-light)}
-.sh-badge.warn{color:var(--amber);background:var(--amber-light)}
-.sh-badge.danger{color:var(--red);background:var(--red-light)}
-.sh-score{font-family:var(--mono);font-weight:500;color:var(--text3);flex-shrink:0}
+def get_ip_info(ip):
+    clean = ip.split(',')[0].strip()
+    local = clean in ('127.0.0.1', '::1', 'localhost')
+    target = '' if local else clean
 
-/* Share in sidebar */
-.share-row{display:flex;flex-direction:column;gap:8px}
-.share-btn-s{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;padding:9px;
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:var(--r);font-family:var(--sans);font-size:12px;
-  font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;
-}
-.share-btn-s:hover{background:var(--surface3);border-color:var(--border2);color:var(--text)}
-.share-btn-s.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.share-btn-s.primary:hover{background:#333}
+    apis = [
+        lambda: _parse(requests.get(
+            'http://ip-api.com/json/' + target + '?fields=status,country,countryCode,regionName,city,timezone,isp,org,query,proxy,hosting,mobile',
+            timeout=5).json(), clean),
+        lambda: _parse(requests.get(
+            'https://ipwho.is/' + target, timeout=5).json(), clean),
+        lambda: _parse(requests.get(
+            'https://ipapi.co/' + target + '/json/', timeout=5).json(), clean),
+        lambda: _parse(requests.get(
+            'https://api.ip.sb/geoip/' + target, timeout=5).json(), clean),
+    ]
 
-/* ── MAIN CONTENT ── */
-.main{padding:32px 32px 80px;display:flex;flex-direction:column;gap:20px}
+    for fn in apis:
+        try:
+            info = fn()
+            if info.get('city') not in ('Unknown', '', None):
+                return info
+        except Exception:
+            continue
 
-/* ── HERO (inside main, pre-scan) ── */
-.hero-bar{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r3);padding:28px 32px;
-  box-shadow:var(--sh);
-}
-.hero-eyebrow{
-  display:inline-flex;align-items:center;gap:7px;
-  font-size:11px;font-family:var(--mono);color:var(--green);
-  border:1px solid rgba(22,163,74,0.3);background:var(--green-mid);
-  border-radius:20px;padding:3px 11px;margin-bottom:14px;letter-spacing:0.3px;
-}
-.hero-eyebrow::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);display:block}
-.hero h1{font-size:30px;font-weight:600;line-height:1.2;letter-spacing:-1px;color:var(--text);margin-bottom:8px}
-.hero h1 em{font-style:italic;color:var(--text2)}
-.hero-sub{font-size:14px;color:var(--text2);line-height:1.65;max-width:520px}
+    return {
+        'ip': clean, 'city': 'Unknown', 'country': 'Unknown',
+        'region': '', 'isp': 'Unknown', 'org': '',
+        'timezone': 'Unknown', 'is_proxy': False,
+        'is_hosting': False, 'is_mobile': False
+    }
 
-/* ── SKELETON ── */
-.skeleton-wrap{display:none}
-.skeleton-wrap.show{display:flex;flex-direction:column;gap:16px}
-.skeleton-row{display:grid;gap:12px}
-.skeleton-row.cols3{grid-template-columns:1fr 1fr 1fr}
-.skeleton-row.cols2{grid-template-columns:1fr 1fr}
-.skel{
-  background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);
-  background-size:200% 100%;
-  animation:shimmer 1.5s infinite;border-radius:var(--r2);
-}
-@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
-.skel-card{height:100px}
-.skel-wide{height:140px}
-.skel-tall{height:200px}
-.skel-check{height:64px}
+def _parse(d, ip):
+    if 'countryCode' in d:
+        return {
+            'ip': d.get('query', ip),
+            'city': d.get('city', 'Unknown'),
+            'region': d.get('regionName', ''),
+            'country': d.get('country', 'Unknown'),
+            'isp': d.get('isp', d.get('org', 'Unknown')),
+            'org': d.get('org', ''),
+            'timezone': d.get('timezone', 'Unknown'),
+            'is_proxy': bool(d.get('proxy')),
+            'is_hosting': bool(d.get('hosting')),
+            'is_mobile': bool(d.get('mobile'))
+        }
+    if 'connection' in d:
+        conn = d.get('connection', {})
+        tz = d.get('timezone', {})
+        return {
+            'ip': d.get('ip', ip),
+            'city': d.get('city', 'Unknown'),
+            'region': d.get('region', ''),
+            'country': d.get('country', 'Unknown'),
+            'isp': conn.get('isp', 'Unknown'),
+            'org': conn.get('org', ''),
+            'timezone': tz.get('id', 'Unknown') if isinstance(tz, dict) else str(tz),
+            'is_proxy': d.get('security', {}).get('proxy', False),
+            'is_hosting': d.get('security', {}).get('hosting', False),
+            'is_mobile': False
+        }
+    return {
+        'ip': d.get('ip', ip),
+        'city': d.get('city', 'Unknown'),
+        'region': d.get('region', ''),
+        'country': d.get('country_name', d.get('country', 'Unknown')),
+        'isp': d.get('org', d.get('isp', 'Unknown')),
+        'org': d.get('org', d.get('organization', '')),
+        'timezone': d.get('timezone', 'Unknown'),
+        'is_proxy': False,
+        'is_hosting': False,
+        'is_mobile': False
+    }
 
-/* ── RESULTS ── */
-.results{display:none}
-.results.show{display:flex;flex-direction:column;gap:20px}
+def detect_vpn(info):
+    if info.get('is_proxy') or info.get('is_hosting'):
+        return True
+    text = (info.get('org', '') + ' ' + info.get('isp', '')).lower()
+    keywords = [
+        'vpn', 'proxy', 'hosting', 'digitalocean', 'linode', 'vultr',
+        'amazon', 'google cloud', 'microsoft azure', 'cloudflare',
+        'mullvad', 'nordvpn', 'expressvpn', 'hetzner', 'ovh',
+        'datacenter', 'data center', 'server farm'
+    ]
+    return any(k in text for k in keywords)
 
-/* ── PILLS ── */
-.pills-row{display:flex;flex-wrap:wrap;gap:7px}
-.pill{
-  display:flex;align-items:center;gap:5px;
-  font-size:11px;font-family:var(--mono);
-  color:var(--text2);background:var(--surface);
-  border:1px solid var(--border);border-radius:6px;padding:5px 11px;
-  box-shadow:var(--sh);
-}
-.pill-key{color:var(--text3);font-size:10px;margin-right:2px;text-transform:uppercase;letter-spacing:0.5px}
-.pill.good{border-color:rgba(22,163,74,0.4);color:var(--green);background:var(--green-light)}
-.pill.warn{border-color:rgba(180,83,9,0.3);color:var(--amber);background:var(--amber-light)}
-.pill.bad{border-color:rgba(220,38,38,0.3);color:var(--red);background:var(--red-light)}
+def run_checks(info, is_https, vpn):
+    high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus', 'Syria']
+    isp_lower = info.get('isp', '').lower()
+    country = info.get('country', 'Unknown')
+    is_mobile = info.get('is_mobile', False) or any(
+        k in isp_lower for k in ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vodafone']
+    )
 
-/* ── SCORE + METRICS ROW ── */
-.score-metrics-row{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:16px;align-items:start}
+    return [
+        {
+            'id': 'https', 'name': 'HTTPS Encryption', 'icon': '🔒',
+            'status': 'pass' if is_https else 'fail',
+            'detail': 'End-to-end encrypted' if is_https else 'Unencrypted - data exposed',
+            'extra': 'TLS active' if is_https else 'No TLS'
+        },
+        {
+            'id': 'vpn', 'name': 'VPN Protection', 'icon': 'shield',
+            'status': 'pass' if vpn else 'warn',
+            'detail': 'VPN active - IP is masked' if vpn else 'No VPN - IP visible to all sites',
+            'extra': ''
+        },
+        {
+            'id': 'region', 'name': 'Region Safety', 'icon': '🌍',
+            'status': 'fail' if country in high_risk else 'pass',
+            'detail': 'High-risk region: ' + country if country in high_risk else 'Standard region: ' + country,
+            'extra': 'high risk' if country in high_risk else ''
+        },
+        {
+            'id': 'isp', 'name': 'ISP Type', 'icon': '📡',
+            'status': 'warn' if is_mobile else 'pass',
+            'detail': 'Mobile carrier: ' + info.get('isp', '') if is_mobile else 'Broadband: ' + info.get('isp', ''),
+            'extra': 'mobile' if is_mobile else 'broadband'
+        },
+        {
+            'id': 'proxy', 'name': 'Proxy / Datacenter', 'icon': '🖥',
+            'status': 'warn' if info.get('is_hosting') else 'pass',
+            'detail': 'Datacenter IP - shared routing' if info.get('is_hosting') else 'Residential IP',
+            'extra': 'datacenter' if info.get('is_hosting') else ''
+        },
+        {
+            'id': 'dns', 'name': 'DNS Privacy', 'icon': '🔍',
+            'status': 'pass' if vpn else 'warn',
+            'detail': 'VPN likely securing DNS' if vpn else 'DNS queries may expose browsing',
+            'extra': ''
+        },
+        {
+            'id': 'ip', 'name': 'IP Exposure', 'icon': '👁',
+            'status': 'warn',
+            'detail': 'Your IP ' + info.get('ip', '') + ' is publicly visible',
+            'extra': ''
+        },
+        {
+            'id': 'proto', 'name': 'Protocol Security', 'icon': '⚡',
+            'status': 'pass' if is_https else 'fail',
+            'detail': 'TLS/SSL active' if is_https else 'Plain HTTP - no TLS',
+            'extra': ''
+        },
+    ]
 
-/* Score ring card */
-.score-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r3);padding:24px;
-  display:flex;flex-direction:column;align-items:center;gap:16px;
-  box-shadow:var(--sh);text-align:center;
-}
-.ring-wrap{position:relative;width:130px;height:130px;flex-shrink:0}
-.ring-wrap svg{transform:rotate(-90deg)}
-.ring-bg{fill:none;stroke:var(--surface3);stroke-width:9}
-.ring-fill{
-  fill:none;stroke-width:9;stroke-linecap:round;
-  stroke-dasharray:345;stroke-dashoffset:345;
-  transition:stroke-dashoffset 1.3s cubic-bezier(.22,1,.36,1),stroke .4s;
-}
-.ring-center{
-  position:absolute;inset:0;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-}
-.ring-number{font-size:38px;font-weight:600;font-family:var(--mono);line-height:1;letter-spacing:-2px}
-.score-badge{
-  display:inline-flex;align-items:center;gap:7px;
-  font-size:13px;font-weight:600;padding:6px 14px;
-  border-radius:20px;border:1px solid;letter-spacing:0.2px;
-}
-.score-badge.safe{color:var(--green);border-color:rgba(22,163,74,0.35);background:var(--green-light)}
-.score-badge.warn{color:var(--amber);border-color:rgba(180,83,9,0.3);background:var(--amber-light)}
-.score-badge.danger{color:var(--red);border-color:rgba(220,38,38,0.3);background:var(--red-light)}
-.score-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;display:block}
+def calculate_score(info, is_https, vpn):
+    score = 0
+    breakdown = []
+    recs = []
 
-/* Metric cards */
-.metric-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r3);padding:20px;
-  box-shadow:var(--sh);position:relative;overflow:hidden;
-  display:flex;flex-direction:column;justify-content:space-between;
-  min-height:100px;
-}
-.metric-accent{position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0}
-.metric-accent.safe{background:var(--green)}
-.metric-accent.warn{background:var(--amber)}
-.metric-accent.danger{background:var(--red)}
-.metric-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.7px;text-transform:uppercase;margin-bottom:8px}
-.metric-value{font-size:30px;font-weight:600;font-family:var(--mono);line-height:1;letter-spacing:-1px}
-.metric-sub{font-size:11px;color:var(--text3);margin-top:6px;font-family:var(--mono)}
+    pts = 0 if is_https else 25
+    score += pts
+    breakdown.append({'label': 'HTTPS', 'points': pts, 'max': 25})
+    if is_https:
+        recs.append({'type': 'good', 'text': 'HTTPS active - connection encrypted.'})
+    else:
+        recs.append({'type': 'bad', 'text': 'No HTTPS - traffic visible in plain text.'})
 
-/* ── TWO COLUMN MID ── */
-.mid-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    pts = 0 if vpn else 20
+    score += pts
+    breakdown.append({'label': 'VPN Protection', 'points': pts, 'max': 20})
+    if vpn:
+        recs.append({'type': 'good', 'text': 'VPN detected - real IP is hidden.'})
+    else:
+        recs.append({'type': 'bad', 'text': 'No VPN - your IP and location are exposed.'})
 
-/* ── CARD BASE ── */
-.card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r3);padding:22px;box-shadow:var(--sh);
-}
-.card-head{
-  font-size:10px;font-family:var(--mono);color:var(--text3);
-  letter-spacing:0.8px;text-transform:uppercase;margin-bottom:16px;
-  display:flex;align-items:center;justify-content:space-between;
-  padding-bottom:12px;border-bottom:1px solid var(--border);
-}
-.card-head-title{display:flex;align-items:center;gap:8px}
+    isp = info.get('isp', '').lower()
+    mobile_isps = ['mobile', 'cellular', 'airtel', 'jio', 'bsnl', 'vodafone', 'idea', 'aircel']
+    big_isps = ['comcast', 'at&t', 'verizon', 'spectrum', 'cox']
+    pts = 10 if any(k in isp for k in mobile_isps) else 14 if any(k in isp for k in big_isps) else 0
+    score += pts
+    breakdown.append({'label': 'ISP Risk', 'points': pts, 'max': 20})
+    if pts > 0:
+        recs.append({'type': 'bad', 'text': 'ISP ' + info.get('isp', '') + ' - use VPN on shared networks.'})
+    else:
+        recs.append({'type': 'good', 'text': 'ISP ' + info.get('isp', 'Unknown') + ' appears standard.'})
 
-/* ── BREAKDOWN BARS ── */
-.bar-item{margin-bottom:13px}
-.bar-item:last-child{margin-bottom:0}
-.bar-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
-.bar-name{font-size:12px;color:var(--text2);font-weight:500}
-.bar-pts{font-size:11px;font-family:var(--mono);font-weight:500}
-.bar-track{height:4px;background:var(--surface2);border-radius:3px;overflow:hidden}
-.bar-fill{height:4px;border-radius:3px;width:0;transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+    high_risk = ['China', 'Russia', 'Iran', 'North Korea', 'Belarus', 'Syria']
+    country = info.get('country', 'Unknown')
+    pts = 15 if country in high_risk else 0
+    score += pts
+    breakdown.append({'label': 'Region Risk', 'points': pts, 'max': 15})
+    if pts:
+        recs.append({'type': 'bad', 'text': country + ' - elevated surveillance risk.'})
+    else:
+        recs.append({'type': 'good', 'text': country + ' - standard risk region.'})
 
-/* ── RECOMMENDATIONS ── */
-.rec-item{
-  display:flex;align-items:flex-start;gap:10px;
-  padding:9px 0;border-bottom:1px solid var(--border);
-  font-size:12px;color:var(--text2);line-height:1.6;
-}
-.rec-item:last-child{border-bottom:none;padding-bottom:0}
-.rec-dot{width:7px;height:7px;border-radius:50%;margin-top:4px;flex-shrink:0}
-.rec-dot.bad{background:var(--red)}
-.rec-dot.good{background:var(--green)}
+    pts = 10 if info.get('is_hosting') else 0
+    score += pts
+    breakdown.append({'label': 'Network Type', 'points': pts, 'max': 20})
+    if pts:
+        recs.append({'type': 'bad', 'text': 'Datacenter IP - possible commercial proxy.'})
 
-/* ── CHECKS GRID ── */
-.checks-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.check-item{
-  display:flex;align-items:center;gap:10px;
-  padding:11px 13px;background:var(--bg);
-  border:1px solid var(--border);border-radius:var(--r2);
-  transition:border-color .15s,box-shadow .15s;cursor:default;
-}
-.check-item:hover{border-color:var(--border2);box-shadow:var(--sh)}
-.check-icon-wrap{
-  width:30px;height:30px;border-radius:7px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;flex-shrink:0;
-}
-.check-icon-wrap.pass{background:var(--green-light)}
-.check-icon-wrap.warn{background:var(--amber-light)}
-.check-icon-wrap.fail{background:var(--red-light)}
-.check-info{flex:1;min-width:0}
-.check-name{font-size:11px;font-weight:600;color:var(--text);letter-spacing:0.1px}
-.check-detail{font-size:10px;color:var(--text3);margin-top:1px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.check-badge{
-  margin-left:auto;font-size:9px;font-family:var(--mono);font-weight:500;
-  letter-spacing:0.5px;text-transform:uppercase;
-  padding:3px 7px;border-radius:4px;flex-shrink:0;
-}
-.check-badge.pass{color:var(--green);background:var(--green-light)}
-.check-badge.warn{color:var(--amber);background:var(--amber-light)}
-.check-badge.fail{color:var(--red);background:var(--red-light)}
+    score = max(0, min(100, score))
+    level = 'Safe' if score <= 30 else 'Moderate' if score <= 60 else 'Dangerous'
+    if score <= 15:
+        grade = 'A+'
+    elif score <= 25:
+        grade = 'A'
+    elif score <= 40:
+        grade = 'B'
+    elif score <= 55:
+        grade = 'C'
+    elif score <= 70:
+        grade = 'D'
+    else:
+        grade = 'F'
 
-/* ── SPEED METER ── */
-.speed-card{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r3);padding:22px;box-shadow:var(--sh);
-}
-.speed-gauges{display:flex;gap:20px;justify-content:center;align-items:center;flex-wrap:wrap}
-.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:8px}
-.gauge-svg-wrap{position:relative;width:120px;height:70px;overflow:hidden}
-.gauge-label{font-size:11px;font-family:var(--mono);color:var(--text3);text-align:center;letter-spacing:0.5px;text-transform:uppercase}
-.gauge-val{font-size:18px;font-weight:600;font-family:var(--mono);color:var(--text);text-align:center;letter-spacing:-0.5px;line-height:1}
-.gauge-unit{font-size:10px;color:var(--text3);font-family:var(--mono)}
-.speed-divider{width:1px;height:60px;background:var(--border)}
+    return {
+        'risk': score,
+        'level': level,
+        'grade': grade,
+        'threats': sum(1 for r in recs if r['type'] == 'bad'),
+        'protections': sum(1 for r in recs if r['type'] == 'good'),
+        'breakdown': breakdown,
+        'recommendations': recs
+    }
 
-/* ── INSIGHTS PANEL ── */
-.insight-item{
-  display:flex;align-items:flex-start;gap:12px;
-  padding:11px 0;border-bottom:1px solid var(--border);
-}
-.insight-item:last-child{border-bottom:none;padding-bottom:0}
-.insight-icon{
-  width:32px;height:32px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:16px;flex-shrink:0;
-}
-.insight-icon.low{background:var(--green-light)}
-.insight-icon.medium{background:var(--amber-light)}
-.insight-icon.high{background:var(--red-light)}
-.insight-text{font-size:12px;color:var(--text2);line-height:1.65;margin-top:6px}
+def build_insights(info, is_https, vpn, score):
+    insights = []
 
-/* ── SECURE GUIDE MODAL ── */
-.modal-overlay{
-  position:fixed;inset:0;z-index:500;
-  background:rgba(26,25,22,0.5);backdrop-filter:blur(4px);
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-.modal-overlay.show{display:flex}
-.modal{
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:var(--r4);max-width:620px;width:100%;max-height:85vh;
-  overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh2);
-  animation:modalIn .25s cubic-bezier(.22,1,.36,1);
-}
-@keyframes modalIn{from{opacity:0;transform:scale(.96) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
-.modal-head{
-  padding:22px 24px;border-bottom:1px solid var(--border);
-  display:flex;align-items:flex-start;justify-content:space-between;
-}
-.modal-title{font-size:17px;font-weight:600;letter-spacing:-0.4px}
-.modal-sub{font-size:12px;color:var(--text2);margin-top:3px}
-.modal-close{
-  background:var(--surface2);border:1px solid var(--border);
-  border-radius:6px;padding:6px 10px;cursor:pointer;
-  font-size:13px;color:var(--text2);transition:all .15s;line-height:1;
-}
-.modal-close:hover{background:var(--surface3);color:var(--text)}
-.modal-body{padding:24px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
-.guide-step{
-  display:flex;gap:14px;padding:14px;
-  background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);
-  transition:border-color .15s;
-}
-.guide-step:hover{border-color:var(--border2)}
-.guide-step-num{
-  width:28px;height:28px;border-radius:7px;flex-shrink:0;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-family:var(--mono);font-weight:500;
-}
-.guide-step-num.critical{background:var(--red-light);color:var(--red)}
-.guide-step-num.high{background:var(--amber-light);color:var(--amber)}
-.guide-step-num.medium{background:var(--blue-light);color:var(--blue)}
-.guide-step-num.low{background:var(--green-light);color:var(--green)}
-.guide-step-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;letter-spacing:-0.2px}
-.guide-step-detail{font-size:11px;color:var(--text2);line-height:1.65}
+    if not vpn:
+        insights.append({
+            'icon': '🔓',
+            'severity': 'high',
+            'text': 'No VPN detected - your IP address and approximate location are exposed to every website you visit.'
+        })
+    else:
+        insights.append({
+            'icon': 'shield',
+            'severity': 'low',
+            'text': 'VPN active - your real IP is masked and traffic is tunnelled through an encrypted connection.'
+        })
 
-/* Protect button */
-.protect-btn{
-  display:inline-flex;align-items:center;gap:9px;
-  padding:11px 20px;background:var(--accent);border:none;border-radius:var(--r);
-  color:#fff;font-family:var(--sans);font-size:13px;font-weight:600;
-  cursor:pointer;transition:all .15s ease;letter-spacing:-0.2px;
-}
-.protect-btn:hover{background:#333;transform:translateY(-1px)}
-.protect-btn:active{transform:translateY(0)}
+    if not is_https:
+        insights.append({
+            'icon': '⚠️',
+            'severity': 'high',
+            'text': 'Lacks HTTPS - data between your device and sites is transmitted as plain text and can be intercepted.'
+        })
+    else:
+        insights.append({
+            'icon': '🔒',
+            'severity': 'low',
+            'text': 'HTTPS encryption is active - end-to-end encryption protects your data in transit.'
+        })
 
-/* Rescan row */
-.rescan-row{display:flex;align-items:center;justify-content:space-between}
-.scan-time{font-size:11px;color:var(--text3);font-family:var(--mono)}
-.rescan-btn{
-  font-size:12px;color:var(--text2);background:var(--surface);
-  border:1px solid var(--border);border-radius:var(--r);
-  padding:6px 13px;cursor:pointer;font-family:var(--sans);font-weight:500;
-  transition:all .15s;
-}
-.rescan-btn:hover{border-color:var(--border2);color:var(--text);background:var(--surface2)}
+    if info.get('is_mobile'):
+        insights.append({
+            'icon': '📱',
+            'severity': 'medium',
+            'text': 'Mobile data detected - generally safer than public Wi-Fi but carrier can see your traffic without VPN.'
+        })
+    else:
+        insights.append({
+            'icon': '🖥',
+            'severity': 'low',
+            'text': 'Residential broadband detected. If this is a public or shared network, a VPN is strongly recommended.'
+        })
 
-/* ── TOAST ── */
-.toast{
-  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
-  background:var(--text);color:#fff;
-  border-radius:var(--r2);padding:11px 20px;
-  font-size:13px;font-weight:500;letter-spacing:-0.1px;
-  transition:transform .3s cubic-bezier(.22,1,.36,1);z-index:9999;
-  white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,0.2);
-}
-.toast.show{transform:translateX(-50%) translateY(0)}
+    if score >= 60:
+        insights.append({
+            'icon': '🚨',
+            'severity': 'high',
+            'text': 'High risk score of ' + str(score) + '/100 detected. Avoid sensitive transactions on this connection.'
+        })
+    elif score >= 30:
+        insights.append({
+            'icon': '⚠️',
+            'severity': 'medium',
+            'text': 'Moderate risk score of ' + str(score) + '/100. Enable a VPN and only use HTTPS sites to reduce exposure.'
+        })
+    else:
+        insights.append({
+            'icon': '✅',
+            'severity': 'low',
+            'text': 'Low risk score of ' + str(score) + '/100. Your connection looks clean. Keep VPN active for best privacy.'
+        })
 
-/* ── RESPONSIVE ── */
-@media(max-width:900px){
-  .layout{grid-template-columns:1fr}
-  .sidebar{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}
-  .score-metrics-row{grid-template-columns:1fr 1fr}
-  .main{padding:20px 16px 60px}
-}
-@media(max-width:600px){
-  .score-metrics-row{grid-template-columns:1fr}
-  .mid-grid{grid-template-columns:1fr}
-  .checks-grid{grid-template-columns:1fr}
-  .speed-divider{display:none}
-  .layout{grid-template-columns:1fr}
-}
+    return insights
 
-/* ── UTIL ── */
-.hidden{display:none!important}
-</style>
-</head>
-<body>
+def build_guide(info, is_https, vpn, score):
+    steps = []
+    step_num = 1
 
-<!-- TOPBAR -->
-<div class="topbar">
-  <a href="/" class="logo">
-    <div class="logo-mark">SH</div>
-    <div class="logo-name">Safe<em>Hop</em></div>
-  </a>
-  <div class="topbar-right">
-    <div class="live-indicator">
-      <div class="live-dot"></div>
-      <span>Live scan</span>
-    </div>
-    <div class="topbar-badge">v3.0</div>
-  </div>
-</div>
+    if not vpn:
+        steps.append({
+            'step': step_num,
+            'priority': 'critical',
+            'title': 'Enable a VPN immediately',
+            'detail': 'Your real IP address is exposed. Use Mullvad, ProtonVPN, or Windscribe. A VPN encrypts all traffic and hides your location from every site you visit.'
+        })
+        step_num += 1
 
-<!-- LAYOUT -->
-<div class="layout">
+    if not is_https:
+        steps.append({
+            'step': step_num,
+            'priority': 'critical',
+            'title': 'Only visit HTTPS websites',
+            'detail': 'Look for the padlock in your browser. Install the HTTPS Everywhere extension. Never enter passwords on plain HTTP pages - your data is sent in clear text.'
+        })
+        step_num += 1
 
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-
-    <!-- Scan CTA -->
-    <div class="scan-cta">
-      <div class="scan-cta-title">Scan your connection</div>
-      <div class="scan-cta-sub">Auto-detects IP, VPN, ISP, HTTPS, and 18 security signals instantly.</div>
-      <button class="scan-btn" id="scan-btn" onclick="runScan()">
-        <span class="btn-icon">⟳</span>
-        Scan my connection
-      </button>
-    </div>
-
-    <!-- Manual check -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Manual Check</div>
-      <div class="manual-form">
-        <input class="manual-input" id="manual-input" type="text" placeholder="IP or URL (e.g. 8.8.8.8)">
-        <button class="manual-btn" onclick="runManualScan()">→ Scan target</button>
-      </div>
-    </div>
-
-    <!-- Actions (post-scan) -->
-    <div class="sidebar-section" id="sidebar-actions" style="display:none">
-      <div class="sidebar-label">Actions</div>
-      <div class="share-row">
-        <button class="protect-btn" onclick="showGuide()" style="width:100%;justify-content:center">
-          🛡 Protect My Device
-        </button>
-        <button class="share-btn-s" onclick="copyLink()">⎘ Copy link</button>
-        <button class="share-btn-s" onclick="copyReport()">↓ Copy full report</button>
-      </div>
-    </div>
-
-    <!-- Stats -->
-    <div class="sidebar-section">
-      <div class="sidebar-label">Global Stats</div>
-      <div class="sidebar-stats" id="sidebar-stats">
-        <div class="sstat"><div class="sstat-val" id="st-total">—</div><div class="sstat-key">Total</div></div>
-        <div class="sstat"><div class="sstat-val" id="st-safe" style="color:var(--green)">—</div><div class="sstat-key">Safe</div></div>
-        <div class="sstat"><div class="sstat-val" id="st-danger" style="color:var(--red)">—</div><div class="sstat-key">Risky</div></div>
-        <div class="sstat"><div class="sstat-val" id="st-avg">—</div><div class="sstat-key">Avg risk</div></div>
-      </div>
-    </div>
-
-    <!-- History -->
-    <div class="sidebar-section" id="history-section" style="display:none">
-      <div class="sidebar-label">Scan History</div>
-      <div id="history-list"></div>
-    </div>
-
-  </aside>
-
-  <!-- MAIN CONTENT -->
-  <main class="main">
-
-    <!-- Hero (pre-scan) -->
-    <div class="hero-bar" id="hero-bar">
-      <div class="hero-eyebrow">Network security scanner</div>
-      <div class="hero">
-        <h1>Is your connection <em>safe right now?</em></h1>
-      </div>
-      <div class="hero-sub">SafeHop checks your IP, VPN, ISP, HTTPS, DNS, encryption, open ports, and browser fingerprint — instantly, with zero setup.</div>
-    </div>
-
-    <!-- Loading skeleton -->
-    <div class="skeleton-wrap" id="skeleton">
-      <div class="skeleton-row cols3">
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-        <div class="skel skel-card"></div>
-      </div>
-      <div class="skeleton-row cols2">
-        <div class="skel skel-wide"></div>
-        <div class="skel skel-wide"></div>
-      </div>
-      <div class="skeleton-row cols2">
-        <div class="skel skel-check"></div>
-        <div class="skel skel-check"></div>
-        <div class="skel skel-check"></div>
-        <div class="skel skel-check"></div>
-      </div>
-    </div>
-
-    <!-- RESULTS -->
-    <div class="results" id="results">
-
-      <div class="rescan-row">
-        <div class="scan-time" id="scan-time"></div>
-        <button class="rescan-btn" onclick="runScan()">↻ Scan again</button>
-      </div>
-
-      <!-- Pills -->
-      <div class="pills-row" id="pills-row"></div>
-
-      <!-- Score + 3 metrics -->
-      <div class="score-metrics-row">
-        <!-- Ring -->
-        <div class="score-card">
-          <div class="ring-wrap">
-            <svg width="130" height="130" viewBox="0 0 130 130">
-              <circle class="ring-bg" cx="65" cy="65" r="55"/>
-              <circle class="ring-fill" id="ring-fill" cx="65" cy="65" r="55"/>
-            </svg>
-            <div class="ring-center">
-              <div class="ring-number" id="ring-score">0</div>
-            </div>
-          </div>
-          <div class="score-badge" id="score-badge">—</div>
-        </div>
-        <!-- Threats -->
-        <div class="metric-card">
-          <div class="metric-accent" id="mc-accent1"></div>
-          <div class="metric-label">Threats Found</div>
-          <div class="metric-value" id="stat-threats" style="color:var(--red)">—</div>
-          <div class="metric-sub" id="stat-threats-sub"></div>
-        </div>
-        <!-- Grade -->
-        <div class="metric-card">
-          <div class="metric-accent" id="mc-accent2"></div>
-          <div class="metric-label">Security Grade</div>
-          <div class="metric-value" id="stat-grade">—</div>
-          <div class="metric-sub">out of A+</div>
-        </div>
-        <!-- Guards -->
-        <div class="metric-card">
-          <div class="metric-accent" id="mc-accent3"></div>
-          <div class="metric-label">Protections</div>
-          <div class="metric-value" id="stat-guards" style="color:var(--green)">—</div>
-          <div class="metric-sub">active guards</div>
-        </div>
-      </div>
-
-      <!-- Smart Insights -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-head-title">💡 Security Insights</div>
-        </div>
-        <div id="insights-list"></div>
-      </div>
-
-      <!-- Internet Speed Meter -->
-      <div class="speed-card">
-        <div class="card-head" style="margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-          <div class="card-head-title">⚡ Connection Speed</div>
-          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="speed-status">measuring...</span>
-        </div>
-        <div class="speed-gauges">
-          <div class="gauge-wrap">
-            <div class="gauge-svg-wrap">
-              <svg width="120" height="70" viewBox="0 0 120 70">
-                <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--surface2)" stroke-width="8" stroke-linecap="round"/>
-                <path id="dl-arc" d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--green)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)"/>
-              </svg>
-            </div>
-            <div class="gauge-val"><span id="dl-val">—</span> <span class="gauge-unit">Mbps</span></div>
-            <div class="gauge-label">↓ Download</div>
-          </div>
-          <div class="speed-divider"></div>
-          <div class="gauge-wrap">
-            <div class="gauge-svg-wrap">
-              <svg width="120" height="70" viewBox="0 0 120 70">
-                <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--surface2)" stroke-width="8" stroke-linecap="round"/>
-                <path id="ul-arc" d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="var(--blue)" stroke-width="8" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" style="transition:stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1)"/>
-              </svg>
-            </div>
-            <div class="gauge-val"><span id="ul-val">—</span> <span class="gauge-unit">Mbps</span></div>
-            <div class="gauge-label">↑ Upload</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Breakdown + Recommendations -->
-      <div class="mid-grid">
-        <div class="card">
-          <div class="card-head"><div class="card-head-title">Score Breakdown</div></div>
-          <div id="breakdown-list"></div>
-        </div>
-        <div class="card">
-          <div class="card-head"><div class="card-head-title">Recommendations</div></div>
-          <div id="rec-list"></div>
-        </div>
-      </div>
-
-      <!-- Security Checks -->
-      <div class="card">
-        <div class="card-head">
-          <div class="card-head-title">Security Checks</div>
-          <span id="checks-count" style="font-size:10px;color:var(--text3);font-family:var(--mono)"></span>
-        </div>
-        <div class="checks-grid" id="checks-grid"></div>
-      </div>
-
-    </div><!-- /results -->
-
-  </main>
-
-</div><!-- /layout -->
-
-<!-- Protect Modal -->
-<div class="modal-overlay" id="guide-modal" onclick="closeGuide(event)">
-  <div class="modal" onclick="event.stopPropagation()">
-    <div class="modal-head">
-      <div>
-        <div class="modal-title">🛡 Protect My Device</div>
-        <div class="modal-sub">Personalized security steps based on your scan results</div>
-      </div>
-      <button class="modal-close" onclick="closeGuide()">✕</button>
-    </div>
-    <div class="modal-body" id="guide-steps"></div>
-  </div>
-</div>
-
-<!-- Toast -->
-<div class="toast" id="toast"></div>
-
-<script>
-var lastResult = null;
-var scanHistory = [];
-var guideData = null;
-
-// ── TOAST ──────────────────────────────────────────────────────────
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 2500);
-}
-
-// ── SCAN (AUTO) ────────────────────────────────────────────────────
-function runScan() {
-  startScanUI();
-  fetch('/auto-scan')
-    .then(function(r) { return r.json(); })
-    .then(function(res) { lastResult = res; showResults(res); loadStats(); })
-    .catch(function() { showToast('Scan failed — please try again'); stopScanUI(); });
-}
-
-// ── SCAN (MANUAL) ─────────────────────────────────────────────────
-function runManualScan() {
-  var target = document.getElementById('manual-input').value.trim();
-  if (!target) { showToast('Enter an IP or URL to scan'); return; }
-  startScanUI();
-  fetch('/manual-scan', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ target: target })
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(res) {
-      if (res.error) { showToast('Error: ' + res.error); stopScanUI(); return; }
-      lastResult = res; showResults(res); loadStats();
+    steps.append({
+        'step': step_num,
+        'priority': 'high',
+        'title': 'Turn off Wi-Fi auto-connect',
+        'detail': 'Disable automatic connection to known networks. Attackers create fake hotspots matching names your device has connected to before, silently intercepting your traffic.'
     })
-    .catch(function() { showToast('Scan failed — please try again'); stopScanUI(); });
-}
+    step_num += 1
 
-function startScanUI() {
-  var btn = document.getElementById('scan-btn');
-  btn.classList.add('scanning');
-  btn.innerHTML = '<span class="btn-icon">⟳</span> Scanning...';
-  btn.disabled = true;
-  document.getElementById('hero-bar').style.display = 'none';
-  document.getElementById('skeleton').classList.add('show');
-  document.getElementById('results').classList.remove('show');
-}
+    steps.append({
+        'step': step_num,
+        'priority': 'high',
+        'title': 'Enable your device firewall',
+        'detail': 'Windows: Control Panel > Firewall. Mac: System Settings > Network > Firewall. A firewall blocks other users on the same network from probing your device.'
+    })
+    step_num += 1
 
-function stopScanUI() {
-  var btn = document.getElementById('scan-btn');
-  btn.classList.remove('scanning');
-  btn.innerHTML = '<span class="btn-icon">⟳</span> Scan my connection';
-  btn.disabled = false;
-  document.getElementById('skeleton').classList.remove('show');
-}
+    steps.append({
+        'step': step_num,
+        'priority': 'medium',
+        'title': 'Avoid sensitive tasks on public networks',
+        'detail': 'Do not log into banking, enter card details, or access critical accounts on public Wi-Fi. Use mobile data for anything sensitive - it is significantly safer.'
+    })
+    step_num += 1
 
-// ── SHOW RESULTS ───────────────────────────────────────────────────
-function showResults(r) {
-  stopScanUI();
-  var d = r.detected;
-  var cls = r.level === 'Safe' ? 'safe' : r.level === 'Moderate' ? 'warn' : 'danger';
-  var color = cls === 'safe' ? 'var(--green)' : cls === 'warn' ? 'var(--amber)' : 'var(--red)';
+    steps.append({
+        'step': step_num,
+        'priority': 'medium',
+        'title': 'Enable two-factor authentication',
+        'detail': 'Even if credentials are stolen on a compromised network, 2FA prevents login. Use an authenticator app like Google Authenticator or Authy over SMS where possible.'
+    })
+    step_num += 1
 
-  // Store guide data
-  guideData = r.secure_guide || [];
+    steps.append({
+        'step': step_num,
+        'priority': 'low',
+        'title': 'Forget the network after use',
+        'detail': 'After using any public network go to Wi-Fi settings and choose Forget. This prevents your device reconnecting automatically to that network or a fake copy of it.'
+    })
 
-  // Scan time
-  document.getElementById('scan-time').textContent = 'Scanned at ' + new Date().toLocaleTimeString() +
-    (d.manual_target ? ' · ' + d.manual_target : '');
+    return steps
 
-  // Pills
-  var pr = document.getElementById('pills-row');
-  pr.innerHTML =
-    pill('IP', d.ip, '') +
-    pill('ISP', d.isp || 'Unknown', '') +
-    pill('Location', d.city + (d.region ? ', '+d.region : '') + ', ' + d.country, '') +
-    pill('Timezone', d.timezone, '') +
-    pill('HTTPS', d.is_https ? 'Yes' : 'No', d.is_https ? 'good' : 'bad') +
-    pill('VPN', d.vpn ? 'Detected' : 'None', d.vpn ? 'good' : 'warn') +
-    pill('Mobile', d.is_mobile ? 'Yes' : 'No', d.is_mobile ? 'warn' : '');
+def scan_ip(ip, is_https, manual_target=None):
+    info = get_ip_info(ip)
+    vpn = detect_vpn(info)
+    result = calculate_score(info, is_https, vpn)
+    result['checks'] = run_checks(info, is_https, vpn)
+    result['insights'] = build_insights(info, is_https, vpn, result['risk'])
+    result['secure_guide'] = build_guide(info, is_https, vpn, result['risk'])
+    result['detected'] = {
+        'ip': info.get('ip', ip.split(',')[0].strip()),
+        'isp': info.get('isp', 'Unknown'),
+        'city': info.get('city', 'Unknown'),
+        'region': info.get('region', ''),
+        'country': info.get('country', 'Unknown'),
+        'is_https': is_https,
+        'vpn': vpn,
+        'timezone': info.get('timezone', 'Unknown'),
+        'is_mobile': info.get('is_mobile', False),
+        'manual_target': manual_target or ''
+    }
 
-  // Ring animation
-  var circ = 2 * Math.PI * 55; // r=55
-  var offset = circ - (r.risk / 100) * circ;
-  var ring = document.getElementById('ring-fill');
-  ring.style.stroke = color;
-  ring.style.strokeDasharray = circ;
-  // Trigger reflow then animate
-  ring.style.strokeDashoffset = circ;
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      ring.style.strokeDashoffset = offset;
-    });
-  });
+    try:
+        db = get_db()
+        db.execute(
+            'INSERT INTO scans (ip,city,country,isp,timezone,is_https,vpn,risk,level,grade,threats,scanned_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+            (result['detected']['ip'], result['detected']['city'],
+             result['detected']['country'], result['detected']['isp'],
+             result['detected']['timezone'], int(is_https), int(vpn),
+             result['risk'], result['level'], result['grade'],
+             result['threats'], datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+        )
+        db.commit()
+    except Exception as e:
+        print('SQLite error: ' + str(e))
 
-  // Count-up score
-  var scoreEl = document.getElementById('ring-score');
-  scoreEl.style.color = color;
-  var count = 0, target_ = r.risk;
-  var timer = setInterval(function() {
-    count = Math.min(count + Math.ceil(target_ / 40), target_);
-    scoreEl.textContent = count;
-    if (count >= target_) clearInterval(timer);
-  }, 20);
+    try:
+        if USE_FIREBASE and db_firebase:
+            db_firebase.collection('scans').add({
+                'ip': result['detected']['ip'],
+                'city': result['detected']['city'],
+                'country': result['detected']['country'],
+                'isp': result['detected']['isp'],
+                'risk': result['risk'],
+                'level': result['level'],
+                'grade': result['grade'],
+                'scanned_at': datetime.utcnow().isoformat()
+            })
+    except Exception as e:
+        print('Firebase error: ' + str(e))
 
-  // Badge
-  var badge = document.getElementById('score-badge');
-  badge.className = 'score-badge ' + cls;
-  badge.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;flex-shrink:0"></span>' + r.level;
+    return result
 
-  // Metric accents
-  ['mc-accent1','mc-accent2','mc-accent3'].forEach(function(id) {
-    document.getElementById(id).className = 'metric-accent ' + cls;
-  });
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-  // Threats
-  var threatEl = document.getElementById('stat-threats');
-  threatEl.textContent = r.threats;
-  threatEl.style.color = r.threats > 0 ? 'var(--red)' : 'var(--green)';
-  document.getElementById('stat-threats-sub').textContent = r.threats > 0 ? 'issues detected' : 'all clear';
+@app.route('/auto-scan')
+def auto_scan():
+    ip = (request.headers.get('X-Forwarded-For') or
+          request.headers.get('X-Real-IP') or
+          request.remote_addr or '127.0.0.1')
+    is_https = (request.headers.get('X-Forwarded-Proto', 'http') == 'https'
+                or request.url.startswith('https'))
+    return jsonify(scan_ip(ip, is_https))
 
-  // Grade
-  var gradeEl = document.getElementById('stat-grade');
-  gradeEl.textContent = r.grade;
-  gradeEl.style.color = color;
+@app.route('/manual-scan', methods=['POST'])
+def manual_scan():
+    data = request.get_json() or {}
+    target = data.get('target', '').strip()
+    if not target:
+        return jsonify({'error': 'No target provided'})
 
-  // Guards
-  document.getElementById('stat-guards').textContent = r.protections;
+    if target.startswith('http'):
+        import urllib.parse
+        parsed = urllib.parse.urlparse(target)
+        target = parsed.hostname or target
 
-  // Insights
-  var insightsList = document.getElementById('insights-list');
-  insightsList.innerHTML = '';
-  if (r.insights && r.insights.length) {
-    r.insights.forEach(function(ins) {
-      insightsList.innerHTML +=
-        '<div class="insight-item">' +
-        '<div class="insight-icon ' + ins.severity + '">' + ins.icon + '</div>' +
-        '<div class="insight-text">' + ins.text + '</div>' +
-        '</div>';
-    });
-  }
+    is_https = (request.headers.get('X-Forwarded-Proto', 'http') == 'https'
+                or request.url.startswith('https'))
 
-  // Speed meter
-  simulateSpeed(d);
+    try:
+        import socket
+        ip = socket.gethostbyname(target)
+    except Exception:
+        ip = target
 
-  // Breakdown bars
-  var bl = document.getElementById('breakdown-list');
-  bl.innerHTML = '';
-  r.breakdown.forEach(function(item) {
-    var pct = Math.round((item.points / item.max) * 100);
-    var c = item.points === 0 ? 'var(--green)' : item.points <= 10 ? 'var(--amber)' : 'var(--red)';
-    bl.innerHTML += '<div class="bar-item">' +
-      '<div class="bar-row"><span class="bar-name">' + item.label + '</span>' +
-      '<span class="bar-pts" style="color:' + c + '">+' + item.points + '</span></div>' +
-      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%;background:' + c + '"></div></div>' +
-      '</div>';
-  });
+    return jsonify(scan_ip(ip, is_https, manual_target=target))
 
-  // Recommendations
-  var rl = document.getElementById('rec-list');
-  rl.innerHTML = '';
-  r.recommendations.forEach(function(rec) {
-    rl.innerHTML += '<div class="rec-item"><div class="rec-dot ' + rec.type + '"></div><span>' + rec.text + '</span></div>';
-  });
+@app.route('/history')
+def history():
+    results = []
+    try:
+        if USE_FIREBASE and db_firebase:
+            docs = db_firebase.collection('scans').order_by(
+                'scanned_at', direction='DESCENDING').limit(15).stream()
+            results = [doc.to_dict() for doc in docs]
+            if results:
+                return jsonify(results)
+    except Exception as e:
+        print('Firebase history error: ' + str(e))
+    try:
+        db = get_db()
+        rows = db.execute('SELECT * FROM scans ORDER BY id DESC LIMIT 15').fetchall()
+        results = [dict(r) for r in rows]
+    except Exception as e:
+        print('SQLite history error: ' + str(e))
+    return jsonify(results)
 
-  // Checks
-  var cg = document.getElementById('checks-grid');
-  cg.innerHTML = '';
-  var passCount = 0, failCount = 0;
-  r.checks.forEach(function(chk) {
-    if (chk.status === 'pass') passCount++;
-    if (chk.status === 'fail') failCount++;
-    var extra = chk.extra ? ' <span style="color:var(--text3);font-size:9px;margin-left:4px;font-family:var(--mono)">[' + chk.extra + ']</span>' : '';
-    cg.innerHTML += '<div class="check-item">' +
-      '<div class="check-icon-wrap ' + chk.status + '">' + chk.icon + '</div>' +
-      '<div class="check-info">' +
-        '<div class="check-name">' + chk.name + extra + '</div>' +
-        '<div class="check-detail">' + chk.detail + '</div>' +
-      '</div>' +
-      '<div class="check-badge ' + chk.status + '">' + chk.status + '</div>' +
-      '</div>';
-  });
-  document.getElementById('checks-count').textContent = passCount + ' passed · ' + failCount + ' failed';
+@app.route('/stats')
+def stats():
+    try:
+        db = get_db()
+        total = db.execute('SELECT COUNT(*) as c FROM scans').fetchone()['c']
+        dangerous = db.execute("SELECT COUNT(*) as c FROM scans WHERE level='Dangerous'").fetchone()['c']
+        safe = db.execute("SELECT COUNT(*) as c FROM scans WHERE level='Safe'").fetchone()['c']
+        avg = db.execute('SELECT AVG(risk) as a FROM scans').fetchone()['a'] or 0
+        return jsonify({'total': total, 'dangerous': dangerous, 'safe': safe, 'avg_risk': round(avg, 1)})
+    except Exception:
+        return jsonify({'total': 0, 'dangerous': 0, 'safe': 0, 'avg_risk': 0})
 
-  // History
-  scanHistory.unshift({
-    ip: d.ip, city: d.city, country: d.country,
-    score: r.risk, level: r.level, cls: cls,
-    time: new Date().toLocaleTimeString()
-  });
-  if (scanHistory.length > 8) scanHistory.pop();
-  updateHistory();
+if __name__ == '__main__':
+    init_db()
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
 
-  // Show sidebar actions
-  document.getElementById('sidebar-actions').style.display = 'block';
-
-  // Show results
-  document.getElementById('results').classList.add('show');
-  setTimeout(function() {
-    document.getElementById('results').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 100);
-}
-
-// ── SPEED METER ────────────────────────────────────────────────────
-function simulateSpeed(detected) {
-  // Realistic simulation based on connection type
-  var isMobile = detected && detected.is_mobile;
-  var isVpn = detected && detected.vpn;
-
-  var dlBase = isMobile ? (Math.random() * 60 + 15) : (Math.random() * 200 + 30);
-  var ulBase = isMobile ? (Math.random() * 20 + 5) : (Math.random() * 80 + 10);
-  if (isVpn) { dlBase *= 0.7; ulBase *= 0.7; } // VPN overhead
-
-  var dl = Math.round(dlBase * 10) / 10;
-  var ul = Math.round(ulBase * 10) / 10;
-
-  document.getElementById('speed-status').textContent = 'estimated';
-
-  // Animate after short delay
-  setTimeout(function() {
-    document.getElementById('dl-val').textContent = dl;
-    document.getElementById('ul-val').textContent = ul;
-
-    // Arc lengths: max display ~300 Mbps for DL, 100 for UL
-    var dlPct = Math.min(dl / 300, 1);
-    var ulPct = Math.min(ul / 100, 1);
-    var arcLen = 157; // half-circle arc
-
-    document.getElementById('dl-arc').style.strokeDashoffset = arcLen - (dlPct * arcLen);
-    document.getElementById('ul-arc').style.strokeDashoffset = arcLen - (ulPct * arcLen);
-  }, 600);
-}
-
-// ── HELPER ─────────────────────────────────────────────────────────
-function pill(key, val, cls) {
-  return '<div class="pill ' + cls + '"><span class="pill-key">' + key + '</span>' + val + '</div>';
-}
-
-// ── HISTORY ────────────────────────────────────────────────────────
-function updateHistory() {
-  if (scanHistory.length === 0) return;
-  var hs = document.getElementById('history-section');
-  var hl = document.getElementById('history-list');
-  hs.style.display = 'block';
-  hl.innerHTML = scanHistory.map(function(h) {
-    var scoreColor = h.cls === 'safe' ? 'var(--green)' : h.cls === 'warn' ? 'var(--amber)' : 'var(--red)';
-    return '<div class="side-history-row">' +
-      '<span class="sh-ip">' + h.ip + '</span>' +
-      '<span class="sh-badge ' + h.cls + '">' + h.level + '</span>' +
-      '<span class="sh-score" style="color:' + scoreColor + '">' + h.score + '</span>' +
-      '</div>';
-  }).join('');
-}
-
-// ── STATS ─────────────────────────────────────────────────────────
-function loadStats() {
-  fetch('/stats')
-    .then(function(r) { return r.json(); })
-    .then(function(s) {
-      document.getElementById('st-total').textContent = s.total;
-      document.getElementById('st-safe').textContent = s.safe;
-      document.getElementById('st-danger').textContent = s.dangerous;
-      document.getElementById('st-avg').textContent = s.avg_risk;
-    }).catch(function() {});
-}
-
-// ── GUIDE MODAL ────────────────────────────────────────────────────
-function showGuide() {
-  if (!guideData || !guideData.length) { showToast('Run a scan first'); return; }
-  var body = document.getElementById('guide-steps');
-  body.innerHTML = '';
-  guideData.forEach(function(step) {
-    body.innerHTML +=
-      '<div class="guide-step">' +
-      '<div class="guide-step-num ' + step.priority + '">' + step.step + '</div>' +
-      '<div>' +
-        '<div class="guide-step-title">' + step.title + '</div>' +
-        '<div class="guide-step-detail">' + step.detail + '</div>' +
-      '</div>' +
-      '</div>';
-  });
-  document.getElementById('guide-modal').classList.add('show');
-  document.body.style.overflow = 'hidden';
-}
-
-function closeGuide(e) {
-  if (e && e.target !== document.getElementById('guide-modal')) return;
-  document.getElementById('guide-modal').classList.remove('show');
-  document.body.style.overflow = '';
-}
-
-// Close on Escape
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeGuide({target: document.getElementById('guide-modal')});
-});
-
-// ── SHARE ─────────────────────────────────────────────────────────
-function copyLink() {
-  navigator.clipboard.writeText(window.location.href)
-    .then(function() { showToast('✓ Link copied to clipboard'); })
-    .catch(function() { showToast('Could not copy link'); });
-}
-
-function copyReport() {
-  if (!lastResult) { showToast('Run a scan first'); return; }
-  var r = lastResult; var d = r.detected;
-  var report = [
-    '=== SafeHop Security Report ===',
-    'Scanned: ' + new Date().toLocaleString(),
-    '',
-    'IP: ' + d.ip,
-    'ISP: ' + d.isp,
-    'Location: ' + d.city + ', ' + d.country,
-    'Timezone: ' + d.timezone,
-    'HTTPS: ' + (d.is_https ? 'Yes' : 'No'),
-    'VPN: ' + (d.vpn ? 'Detected' : 'None'),
-    '',
-    'RISK SCORE: ' + r.risk + '/100',
-    'LEVEL: ' + r.level,
-    'GRADE: ' + r.grade,
-    'THREATS: ' + r.threats,
-    '',
-    '--- Recommendations ---',
-    r.recommendations.map(function(rec) {
-      return (rec.type === 'bad' ? '✗' : '✓') + ' ' + rec.text;
-    }).join('\n'),
-    '',
-    'Generated by SafeHop — ' + window.location.href
-  ].join('\n');
-
-  navigator.clipboard.writeText(report)
-    .then(function() { showToast('✓ Full report copied'); })
-    .catch(function() { showToast('Could not copy report'); });
-}
-
-// ── INIT ──────────────────────────────────────────────────────────
-loadStats();
-
-// Manual input — trigger on Enter
-document.getElementById('manual-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') runManualScan();
-});
-</script>
-</body>
-</html>
+init_db()
